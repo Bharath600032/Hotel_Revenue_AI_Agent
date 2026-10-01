@@ -22,7 +22,7 @@ async def list_hotels(
     limit: int = Query(100, ge=1, le=500),
     city: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve list of hotels accessible to current user."""
     return hotel_service.list_hotels(db, skip=skip, limit=limit, city=city)

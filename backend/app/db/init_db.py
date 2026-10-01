@@ -79,6 +79,21 @@ def init_db(db: Session) -> None:
             user.is_active = True
     db.commit()
 
+    # Auto-seed demo hotels if database has no hotels
+    if db.query(Hotel).count() == 0:
+        logger.info("no_hotels_found_seeding_demo_properties")
+        try:
+            import sys
+            from pathlib import Path
+            root_dir = Path(__file__).resolve().parent.parent.parent
+            scripts_dir = root_dir / "scripts"
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            from seed_demo_data import seed_demo_data
+            seed_demo_data()
+        except Exception as seed_err:
+            logger.warning("demo_hotels_seeding_failed", error=str(seed_err))
+
     # Seed live metric data and competitor rates for all hotel properties
     from app.agents.hotel_agent_factory import hotel_agent_factory
     all_hotels = db.query(Hotel).all()

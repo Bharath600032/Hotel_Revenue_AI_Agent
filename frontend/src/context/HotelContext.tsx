@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { Hotel } from '../types';
+import { useAuth } from '../auth/AuthContext';
 
 interface HotelContextType {
   hotels: Hotel[];
@@ -17,10 +18,13 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [selectedHotel, setSelectedHotelState] = useState<Hotel | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
+  const { isAuthenticated, token } = useAuth();
 
-  const fetchHotels = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+  const fetchHotels = useCallback(async () => {
+    const activeToken = token || localStorage.getItem('access_token');
+    if (!activeToken) {
+      setHotels([]);
+      setSelectedHotelState(null);
       setLoadingHotels(false);
       return;
     }
@@ -40,6 +44,8 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           setSelectedHotelState(initialHotel);
           localStorage.setItem('selected_hotel_id', initialHotel.hotel_id.toString());
+        } else {
+          setSelectedHotelState(null);
         }
       }
     } catch (err) {
@@ -47,11 +53,17 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setLoadingHotels(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    fetchHotels();
-  }, []);
+    if (isAuthenticated || localStorage.getItem('access_token')) {
+      fetchHotels();
+    } else {
+      setHotels([]);
+      setSelectedHotelState(null);
+      setLoadingHotels(false);
+    }
+  }, [isAuthenticated, token, fetchHotels]);
 
   const setSelectedHotel = (hotel: Hotel) => {
     setSelectedHotelState(hotel);
