@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Autonomous Revenue AI Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              border: 'hsl(217.2 32.6% 17.5%)',
+              input: 'hsl(217.2 32.6% 17.5%)',
+              ring: 'hsl(238.7 83.5% 66.7%)',
+              background: 'hsl(222.2 84% 4.9%)',
+              foreground: 'hsl(210 40% 98%)',
+              primary: {
+                DEFAULT: '#4f46e5',
+                foreground: '#ffffff',
+              },
+              secondary: {
+                DEFAULT: '#1e293b',
+                foreground: '#f8fafc',
+              },
+              muted: {
+                DEFAULT: '#1e293b',
+                foreground: '#94a3b8',
+              },
+              accent: {
+                DEFAULT: '#1e293b',
+                foreground: '#f8fafc',
+              },
+            },
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-indigo-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

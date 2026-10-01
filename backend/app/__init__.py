@@ -1,0 +1,4 @@
+"""
+Hotel Autonomous Revenue AI Agent Backend Package
+"""
+__version__ = "1.0.0"
