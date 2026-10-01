@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.ai import PriceRecommendations
 from app.models.audit import AuditLogs
+from app.models.inventory import RoomInventory
 from app.schemas.approval import ApprovalResponse
 from app.core.exceptions import ResourceNotFoundError, DataValidationError
 
