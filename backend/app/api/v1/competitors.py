@@ -29,9 +29,12 @@ async def list_competitor_hotels(
 ):
     """Retrieve list of registered competitor hotels for property."""
     verify_hotel_access(hotel_id, current_user)
-    from app.agents.hotel_agent_factory import hotel_agent_factory
-    hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
-    return db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+    comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+    if not comps:
+        from app.agents.hotel_agent_factory import hotel_agent_factory
+        hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
+        comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+    return comps
 
 
 @router.post("", response_model=CompetitorHotelResponse, status_code=status.HTTP_201_CREATED)

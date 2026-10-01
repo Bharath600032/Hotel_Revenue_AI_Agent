@@ -40,7 +40,17 @@ export const Competitors: React.FC = () => {
   const { selectedHotel } = useHotel();
   const hotelId = selectedHotel?.hotel_id || 1;
   const [stayDate, setStayDate] = useState(getTodayDateString());
-  const [myRate, setMyRate] = useState(8500);
+  const [myRate, setMyRate] = useState<number>(() => {
+    const saved = localStorage.getItem(`competitor_my_rate_${hotelId}`);
+    return saved ? Number(saved) : (selectedHotel?.min_price_floor ? Math.round(selectedHotel.min_price_floor * 1.8) : 8500);
+  });
+
+  const handleMyRateChange = (val: number) => {
+    setMyRate(val);
+    if (val > 0) {
+      localStorage.setItem(`competitor_my_rate_${hotelId}`, val.toString());
+    }
+  };
 
   const [competitors, setCompetitors] = useState<CompetitorHotel[]>([]);
   const [analysis, setAnalysis] = useState<CompetitorAnalysis | null>(null);
@@ -214,7 +224,7 @@ export const Competitors: React.FC = () => {
             <input
               type="number"
               value={myRate}
-              onChange={(e) => setMyRate(Number(e.target.value))}
+              onChange={(e) => handleMyRateChange(Number(e.target.value))}
               className="bg-slate-950 border border-slate-800 text-emerald-400 font-bold px-2 py-1 rounded w-24"
             />
           </div>

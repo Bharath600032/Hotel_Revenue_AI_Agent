@@ -125,7 +125,7 @@ class GoogleHotelPriceScraper:
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 },
             )
-            with urllib.request.urlopen(req, timeout=4) as resp:
+            with urllib.request.urlopen(req, timeout=1.2) as resp:
                 if resp.status == 200:
                     html_content = resp.read().decode("utf-8", errors="ignore")
                     scraped_price = self._parse_price_from_html(html_content)
@@ -174,9 +174,11 @@ class GoogleHotelPriceScraper:
         self, db: Session, hotel_id: int, stay_date: Optional[date] = None
     ) -> List[Dict[str, Any]]:
         """
-        Fetches live Google pricing for all active competitors of a hotel property,
+        Fetches live Google pricing in parallel for all active competitors of a hotel property,
         and saves/updates database records in CompetitorRates with lowest OTA provider details.
         """
+        from concurrent.futures import ThreadPoolExecutor
+
         if not stay_date:
             stay_date = date.today()
 
@@ -197,15 +199,19 @@ class GoogleHotelPriceScraper:
             .all()
         )
 
-        synced_results = []
-        for comp in competitors:
-            price_data = self.fetch_live_google_price(
+        def fetch_task(comp):
+            return comp, self.fetch_live_google_price(
                 competitor_name=comp.competitor_name,
                 city=comp.city,
                 stay_date=stay_date,
                 star_rating=comp.star_rating or 4.0,
             )
 
+        with ThreadPoolExecutor(max_workers=min(10, max(2, len(competitors)))) as executor:
+            fetched_pairs = list(executor.map(fetch_task, competitors))
+
+        synced_results = []
+        for comp, price_data in fetched_pairs:
             existing_rate = (
                 db.query(CompetitorRates)
                 .filter(

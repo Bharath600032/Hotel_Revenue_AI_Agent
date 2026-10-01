@@ -233,99 +233,141 @@ export const Events: React.FC = () => {
           )}
 
           {/* Events & Holidays Lists */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* City Events List */}
-            <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
-              <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <PartyPopper className="w-5 h-5 text-indigo-400" />
-                  Regional City Events ({activeCity})
-                </h3>
-                <span className="text-xs text-slate-400 font-mono">
-                  Total: <strong className="text-white">{events.length}</strong>
-                </span>
-              </div>
+          {(() => {
+            const regionalCityEvents = events.filter((e) => e.event_type !== 'HOLIDAY');
+            const holidayCategoryEvents = events.filter((e) => e.event_type === 'HOLIDAY');
 
-              {events.length === 0 ? (
-                <div className="p-8 text-center bg-slate-950/50 rounded-2xl border border-slate-800/60 space-y-2">
-                  <PartyPopper className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-300">No events found for {activeCity}.</p>
-                  <p className="text-[11px] text-slate-500">Add an event manually or upload an Excel file to trigger yield multipliers.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {events.map((e) => (
-                    <div key={e.event_id} className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-2 hover:border-slate-700 transition-colors group">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{e.event_name}</h4>
-                          {e.venue && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                              <Building className="w-3 h-3 text-slate-500" />
-                              <span>{e.venue}</span>
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* City Events List */}
+                <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                  <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <PartyPopper className="w-5 h-5 text-indigo-400" />
+                      Regional City Events ({activeCity})
+                    </h3>
+                    <span className="text-xs text-slate-400 font-mono">
+                      Total: <strong className="text-white">{regionalCityEvents.length}</strong>
+                    </span>
+                  </div>
+
+                  {regionalCityEvents.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-950/50 rounded-2xl border border-slate-800/60 space-y-2">
+                      <PartyPopper className="w-8 h-8 text-slate-600 mx-auto" />
+                      <p className="text-xs font-semibold text-slate-300">No regional events found for {activeCity}.</p>
+                      <p className="text-[11px] text-slate-500">Add an event manually or upload an Excel file to trigger yield multipliers.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {regionalCityEvents.map((e) => (
+                        <div key={e.event_id} className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-2 hover:border-slate-700 transition-colors group">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-bold text-white text-sm group-hover:text-indigo-300 transition-colors">{e.event_name}</h4>
+                              {e.venue && (
+                                <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
+                                  <Building className="w-3 h-3 text-slate-500" />
+                                  <span>{e.venue}</span>
+                                </div>
+                              )}
                             </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold rounded-lg border border-indigo-500/20">
+                                {e.event_type}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteEvent(e.event_id, e.event_name)}
+                                className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors opacity-60 group-hover:opacity-100"
+                                title="Delete Event"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60 font-mono">
+                            <span>📅 {e.start_date} to {e.end_date}</span>
+                            {e.expected_attendance && (
+                              <span className="text-amber-400 font-bold">Attendance: {e.expected_attendance.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Holidays & Holiday Events List */}
+                <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+                  <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Flame className="w-5 h-5 text-rose-400" />
+                      National & Festival Holidays (India)
+                    </h3>
+                    <span className="text-xs text-slate-400 font-mono">
+                      Total: <strong className="text-white">{holidays.length + holidayCategoryEvents.length}</strong>
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* User Created / Scraped Holiday Events */}
+                    {holidayCategoryEvents.map((e) => (
+                      <div key={`h-evt-${e.event_id}`} className="p-4 bg-amber-950/30 border border-amber-800/50 rounded-2xl space-y-2 group">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-amber-200 text-sm">{e.event_name}</h4>
+                            {e.venue && (
+                              <div className="flex items-center gap-1 text-[11px] text-amber-400/80 mt-0.5">
+                                <Building className="w-3 h-3 text-amber-500" />
+                                <span>{e.venue}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-bold rounded-lg border border-amber-500/40">
+                              HOLIDAY EVENT
+                            </span>
+                            <button
+                              onClick={() => handleDeleteEvent(e.event_id, e.event_name)}
+                              className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors opacity-60 group-hover:opacity-100"
+                              title="Delete Holiday Event"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-amber-900/40 font-mono">
+                          <span>📅 {e.start_date} to {e.end_date} ({e.city})</span>
+                          <span className="text-amber-400 font-bold">Importance: {e.importance}/5 ★</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Official National Holidays */}
+                    {holidays.map((h) => (
+                      <div key={h.holiday_id} className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-bold text-white text-sm">{h.holiday_name}</h4>
+                          {h.is_long_weekend && (
+                            <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-500/20 flex items-center gap-1">
+                              <Flame className="w-3 h-3 text-emerald-400" />
+                              Long Weekend
+                            </span>
                           )}
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold rounded-lg border border-indigo-500/20">
-                            {e.event_type}
-                          </span>
-                          <button
-                            onClick={() => handleDeleteEvent(e.event_id, e.event_name)}
-                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors opacity-60 group-hover:opacity-100"
-                            title="Delete Event"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60 font-mono">
+                          <span>📅 {h.holiday_date} ({h.country})</span>
+                          <span className="text-emerald-400 font-bold">Demand Boost: {h.demand_multiplier}x</span>
                         </div>
                       </div>
-
-                      <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60 font-mono">
-                        <span>📅 {e.start_date} to {e.end_date}</span>
-                        {e.expected_attendance && (
-                          <span className="text-amber-400 font-bold">Attendance: {e.expected_attendance.toLocaleString()}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Holidays List */}
-            <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
-              <div className="flex justify-between items-center border-b border-slate-800/80 pb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-rose-400" />
-                  National & Festival Holidays (India)
-                </h3>
-                <span className="text-xs text-slate-400 font-mono">
-                  Total: <strong className="text-white">{holidays.length}</strong>
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {holidays.map((h) => (
-                  <div key={h.holiday_id} className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl space-y-1">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-white text-sm">{h.holiday_name}</h4>
-                      {h.is_long_weekend && (
-                        <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-500/20 flex items-center gap-1">
-                          <Flame className="w-3 h-3 text-emerald-400" />
-                          Long Weekend
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/60 font-mono">
-                      <span>📅 {h.holiday_date} ({h.country})</span>
-                      <span className="text-emerald-400 font-bold">Demand Boost: {h.demand_multiplier}x</span>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
         </>
       )}
 
