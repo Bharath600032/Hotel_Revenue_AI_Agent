@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import { PriceRecommendation } from '../types';
-import { ShieldAlert, CheckCircle2, Edit3, XCircle, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, Edit3, XCircle, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ApprovalQueueWidgetProps {
   hotelId?: number;
@@ -13,6 +13,10 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
   const [loading, setLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  // Pagination / Slide state (Max 4 records per page slide)
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 4;
+
   // Modal State for Override / Reject
   const [overrideModalRec, setOverrideModalRec] = useState<PriceRecommendation | null>(null);
   const [overrideRateInput, setOverrideRateInput] = useState<number>(0);
@@ -21,9 +25,17 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
   const [rejectModalRec, setRejectModalRec] = useState<PriceRecommendation | null>(null);
   const [rejectReasonInput, setRejectReasonInput] = useState<string>('');
 
+  const totalPages = Math.ceil(pendingItems.length / ITEMS_PER_PAGE) || 1;
+
   useEffect(() => {
     fetchPendingQueue();
   }, [hotelId]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [pendingItems.length, totalPages, currentPage]);
 
   const fetchPendingQueue = async () => {
     try {
@@ -131,79 +143,124 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
         </div>
       ) : pendingItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {pendingItems.map((rec) => {
-            const shiftPct = rec.current_rate
-              ? (((rec.recommended_rate - rec.current_rate) / rec.current_rate) * 100).toFixed(1)
-              : '0.0';
-            return (
-              <div
-                key={rec.recommendation_id}
-                className="p-4 bg-slate-950/80 border border-slate-800/80 hover:border-indigo-500/40 rounded-2xl space-y-3 transition-all shadow-md"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-mono font-bold text-indigo-400">{rec.stay_date}</span>
-                    <h4 className="text-sm font-bold text-white mt-0.5">Room Type #{rec.room_type_id}</h4>
-                  </div>
-                  <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/20">
-                    &gt;10% SHIFT
-                  </span>
-                </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(() => {
+              const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+              const visiblePendingItems = pendingItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-                <div className="grid grid-cols-3 gap-2 bg-slate-900/80 p-2.5 rounded-xl text-center text-xs border border-slate-800/60">
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase">Current</span>
-                    <p className="font-extrabold text-slate-300">₹{rec.current_rate?.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase">AI Proposed</span>
-                    <p className="font-extrabold text-emerald-400">₹{rec.recommended_rate?.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase">Variation</span>
-                    <p className={`font-extrabold ${Number(shiftPct) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {Number(shiftPct) > 0 ? `+${shiftPct}%` : `${shiftPct}%`}
+              return visiblePendingItems.map((rec) => {
+                const shiftPct = rec.current_rate
+                  ? (((rec.recommended_rate - rec.current_rate) / rec.current_rate) * 100).toFixed(1)
+                  : '0.0';
+                return (
+                  <div
+                    key={rec.recommendation_id}
+                    className="p-4 bg-slate-950/80 border border-slate-800/80 hover:border-indigo-500/40 rounded-2xl space-y-3 transition-all shadow-md"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-mono font-bold text-indigo-400">{rec.stay_date}</span>
+                        <h4 className="text-sm font-bold text-white mt-0.5">Room Type #{rec.room_type_id}</h4>
+                      </div>
+                      <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/20">
+                        &gt;10% SHIFT
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 bg-slate-900/80 p-2.5 rounded-xl text-center text-xs border border-slate-800/60">
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Current</span>
+                        <p className="font-extrabold text-slate-300">₹{rec.current_rate?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">AI Proposed</span>
+                        <p className="font-extrabold text-emerald-400">₹{rec.recommended_rate?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Variation</span>
+                        <p className={`font-extrabold ${Number(shiftPct) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {Number(shiftPct) > 0 ? `+${shiftPct}%` : `${shiftPct}%`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-400 italic bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/50">
+                      "{rec.price_reason || rec.status || 'High demand forecast requires rate adjustment'}"
                     </p>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => handleApprove(rec)}
+                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Approve
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setOverrideModalRec(rec);
+                          setOverrideRateInput(rec.recommended_rate);
+                        }}
+                        className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        Override
+                      </button>
+
+                      <button
+                        onClick={() => setRejectModalRec(rec)}
+                        className="py-2 px-3 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                </div>
+                );
+              });
+            })()}
+          </div>
 
-                <p className="text-xs text-slate-400 italic bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/50">
-                  "{rec.price_reason || rec.status || 'High demand forecast requires rate adjustment'}"
-                </p>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={() => handleApprove(rec)}
-                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Approve
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setOverrideModalRec(rec);
-                      setOverrideRateInput(rec.recommended_rate);
-                    }}
-                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-indigo-600/20"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    Override
-                  </button>
-
-                  <button
-                    onClick={() => setRejectModalRec(rec)}
-                    className="py-2 px-3 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    Reject
-                  </button>
-                </div>
+          {/* Pagination / Slide Controls */}
+          {pendingItems.length > ITEMS_PER_PAGE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+              <div className="text-xs text-slate-400 font-medium">
+                Showing{' '}
+                <strong className="text-white font-mono">
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                  {Math.min(currentPage * ITEMS_PER_PAGE, pendingItems.length)}
+                </strong>{' '}
+                of <strong className="text-amber-400 font-mono">{pendingItems.length}</strong> pending recommendations
               </div>
-            );
-          })}
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+
+                <div className="px-3 py-1.5 bg-slate-950 text-xs font-mono font-bold text-indigo-300 rounded-xl border border-slate-800">
+                  Page <span className="text-white">{currentPage}</span> / {totalPages}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-6 text-slate-400 text-xs font-medium">
