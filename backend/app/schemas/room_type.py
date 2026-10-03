@@ -19,6 +19,7 @@ class RoomTypeCreate(RoomTypeBase):
 
 
 class RoomTypeUpdate(BaseModel):
+    room_type_code: Optional[str] = None
     room_type_name: Optional[str] = None
     max_occupancy: Optional[int] = Field(default=None, ge=1, le=10)
     base_price: Optional[float] = Field(default=None, gt=0.0)

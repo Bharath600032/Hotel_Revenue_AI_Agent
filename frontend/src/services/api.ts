@@ -74,6 +74,21 @@ export const apiService = {
     return res.data;
   },
 
+  createRoomType: async (hotelId: number, data: { room_type_code: string; room_type_name: string; max_occupancy: number; base_price: number; total_inventory: number; status?: string }): Promise<RoomType> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/room-types`, data);
+    return res.data;
+  },
+
+  updateRoomType: async (hotelId: number, roomTypeId: number, data: Partial<{ room_type_code: string; room_type_name: string; max_occupancy: number; base_price: number; total_inventory: number; status: string }>): Promise<RoomType> => {
+    const res = await apiClient.put(`/hotels/${hotelId}/room-types/${roomTypeId}`, data);
+    return res.data;
+  },
+
+  deleteRoomType: async (hotelId: number, roomTypeId: number): Promise<any> => {
+    const res = await apiClient.delete(`/hotels/${hotelId}/room-types/${roomTypeId}`);
+    return res.data;
+  },
+
   // Analytics
   getRevenueSummary: async (hotelId: number, startDate: string, endDate: string): Promise<RevenueSummary> => {
     const res = await apiClient.get(`/hotels/${hotelId}/analytics/metrics`, {

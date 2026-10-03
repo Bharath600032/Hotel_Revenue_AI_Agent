@@ -101,6 +101,98 @@ export const Hotels: React.FC = () => {
   const [compStatus, setCompStatus] = useState('ACTIVE');
   const [savingComp, setSavingComp] = useState(false);
 
+  // Room Type Form State
+  const [showAddRtModal, setShowAddRtModal] = useState(false);
+  const [editingRt, setEditingRt] = useState<RoomType | null>(null);
+  const [deletingRt, setDeletingRt] = useState<RoomType | null>(null);
+
+  const [rtCode, setRtCode] = useState('');
+  const [rtName, setRtName] = useState('');
+  const [rtMaxOccupancy, setRtMaxOccupancy] = useState(2);
+  const [rtBasePrice, setRtBasePrice] = useState(4000);
+  const [rtInventory, setRtInventory] = useState(20);
+  const [rtStatus, setRtStatus] = useState('ACTIVE');
+  const [rtCodeManuallyEdited, setRtCodeManuallyEdited] = useState(false);
+
+  const [editRtCode, setEditRtCode] = useState('');
+  const [editRtName, setEditRtName] = useState('');
+  const [editRtMaxOccupancy, setEditRtMaxOccupancy] = useState(2);
+  const [editRtBasePrice, setEditRtBasePrice] = useState(4000);
+  const [editRtInventory, setEditRtInventory] = useState(20);
+  const [editRtStatus, setEditRtStatus] = useState('ACTIVE');
+  const [editRtCodeManuallyEdited, setEditRtCodeManuallyEdited] = useState(false);
+  const [savingRt, setSavingRt] = useState(false);
+
+  const deriveRoomCode = (name: string, hotelCode?: string): string => {
+    if (!name.trim()) return '';
+
+    const prefix = hotelCode ? hotelCode.split('_')[0].toUpperCase() : '8485';
+    const clean = name.trim().toLowerCase();
+
+    let suffix = '';
+    if (clean.includes('superior')) {
+      suffix = 'SUP';
+    } else if (clean.includes('deluxe')) {
+      suffix = 'DLX';
+    } else if (clean.includes('suite')) {
+      if (clean.includes('executive')) suffix = 'STE';
+      else if (clean.includes('presidential')) suffix = 'PRES';
+      else if (clean.includes('luxury')) suffix = 'STE';
+      else if (clean.includes('junior')) suffix = 'JSTE';
+      else suffix = 'STE';
+    } else if (clean.includes('standard')) {
+      suffix = 'STD';
+    } else if (clean.includes('executive')) {
+      suffix = 'EXEC';
+    } else if (clean.includes('presidential')) {
+      suffix = 'PRES';
+    } else if (clean.includes('penthouse')) {
+      suffix = 'PENT';
+    } else if (clean.includes('villa')) {
+      suffix = 'VLA';
+    } else if (clean.includes('cottage')) {
+      suffix = 'CTG';
+    } else if (clean.includes('family')) {
+      suffix = 'FAM';
+    } else if (clean.includes('premium')) {
+      suffix = 'PRM';
+    } else if (clean.includes('royal')) {
+      suffix = 'ROY';
+    } else if (clean.includes('club')) {
+      suffix = 'CLB';
+    } else if (clean.includes('ocean') || clean.includes('sea') || clean.includes('beach')) {
+      suffix = 'OCN';
+    } else {
+      const words = clean.split(/\s+/).filter(Boolean);
+      if (words.length >= 2) {
+        suffix = words.map((w) => w[0]).join('').toUpperCase();
+        if (suffix.length < 3) {
+          suffix = (words[0].substring(0, 2) + words[1].substring(0, 2)).toUpperCase();
+        }
+      } else if (words.length === 1) {
+        suffix = words[0].substring(0, 3).toUpperCase();
+      } else {
+        suffix = 'RM';
+      }
+    }
+
+    return `${prefix}_${suffix}`;
+  };
+
+  const handleRtNameChange = (val: string) => {
+    setRtName(val);
+    if (!rtCodeManuallyEdited) {
+      setRtCode(deriveRoomCode(val, selectedHotel?.hotel_code));
+    }
+  };
+
+  const handleEditRtNameChange = (val: string) => {
+    setEditRtName(val);
+    if (!editRtCodeManuallyEdited) {
+      setEditRtCode(deriveRoomCode(val, selectedHotel?.hotel_code));
+    }
+  };
+
   const canManageHotels = !user || ['Super Admin', 'Administrator', 'Revenue Manager'].includes(user.role);
 
   useEffect(() => {
@@ -404,6 +496,102 @@ export const Hotels: React.FC = () => {
       alert(err?.response?.data?.detail || 'Failed to delete competitor.');
     } finally {
       setSavingComp(false);
+    }
+  };
+
+  // --- ROOM TYPE STATUS TOGGLE & CRUD ACTIONS ---
+
+  const handleToggleRoomTypeStatus = async (rt: RoomType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedHotel || !canManageHotels) return;
+    const newStatus = rt.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      await apiService.updateRoomType(selectedHotel.hotel_id, rt.room_type_id, { status: newStatus });
+      setSuccessMsg(`Status for room category '${rt.room_type_name}' updated to ${newStatus}`);
+      await fetchRoomTypes(selectedHotel.hotel_id);
+    } catch (err: any) {
+      console.error('Failed to toggle room type status:', err);
+      alert(err?.response?.data?.detail || 'Failed to update room category status.');
+    }
+  };
+
+  const handleCreateRoomType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHotel) return;
+    try {
+      setSavingRt(true);
+      await apiService.createRoomType(selectedHotel.hotel_id, {
+        room_type_code: rtCode.toUpperCase().trim(),
+        room_type_name: rtName.trim(),
+        max_occupancy: Number(rtMaxOccupancy),
+        base_price: Number(rtBasePrice),
+        total_inventory: Number(rtInventory),
+        status: rtStatus,
+      });
+
+      setSuccessMsg(`Room category '${rtName}' created successfully!`);
+      setShowAddRtModal(false);
+      setRtCode('');
+      setRtName('');
+      setRtCodeManuallyEdited(false);
+      await fetchRoomTypes(selectedHotel.hotel_id);
+    } catch (err: any) {
+      console.error('Failed to create room category:', err);
+      alert(err?.response?.data?.detail || 'Failed to create room category.');
+    } finally {
+      setSavingRt(false);
+    }
+  };
+
+  const openEditRtModal = (rt: RoomType) => {
+    setEditingRt(rt);
+    setEditRtCode(rt.room_type_code);
+    setEditRtName(rt.room_type_name);
+    setEditRtMaxOccupancy(rt.max_occupancy);
+    setEditRtBasePrice(rt.base_price);
+    setEditRtInventory(rt.total_inventory);
+    setEditRtStatus(rt.status || 'ACTIVE');
+    setEditRtCodeManuallyEdited(false);
+  };
+
+  const handleUpdateRoomType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHotel || !editingRt) return;
+    try {
+      setSavingRt(true);
+      await apiService.updateRoomType(selectedHotel.hotel_id, editingRt.room_type_id, {
+        room_type_code: editRtCode.toUpperCase().trim(),
+        room_type_name: editRtName.trim(),
+        max_occupancy: Number(editRtMaxOccupancy),
+        base_price: Number(editRtBasePrice),
+        total_inventory: Number(editRtInventory),
+        status: editRtStatus,
+      });
+
+      setSuccessMsg(`Room category '${editRtName}' updated successfully!`);
+      setEditingRt(null);
+      await fetchRoomTypes(selectedHotel.hotel_id);
+    } catch (err: any) {
+      console.error('Failed to update room category:', err);
+      alert(err?.response?.data?.detail || 'Failed to update room category.');
+    } finally {
+      setSavingRt(false);
+    }
+  };
+
+  const handleDeleteRoomType = async () => {
+    if (!selectedHotel || !deletingRt) return;
+    try {
+      setSavingRt(true);
+      await apiService.deleteRoomType(selectedHotel.hotel_id, deletingRt.room_type_id);
+      setSuccessMsg(`Room category '${deletingRt.room_type_name}' deleted.`);
+      setDeletingRt(null);
+      await fetchRoomTypes(selectedHotel.hotel_id);
+    } catch (err: any) {
+      console.error('Failed to delete room category:', err);
+      alert(err?.response?.data?.detail || 'Failed to delete room category.');
+    } finally {
+      setSavingRt(false);
     }
   };
 
@@ -715,10 +903,36 @@ export const Hotels: React.FC = () => {
 
           {/* Room Types Table */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <BedDouble className="w-5 h-5 text-indigo-400" />
-              Room Categories & Master Inventory
-            </h3>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <BedDouble className="w-5 h-5 text-indigo-400" />
+                  Room Categories & Master Inventory
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Manage room categories, baseline rates, capacity limits, and master inventory allocations.
+                </p>
+              </div>
+
+              {canManageHotels && (
+                <button
+                  onClick={() => {
+                    setRtCode(`${selectedHotel.hotel_code}_`);
+                    setRtName('');
+                    setRtMaxOccupancy(2);
+                    setRtBasePrice(4000);
+                    setRtInventory(20);
+                    setRtStatus('ACTIVE');
+                    setShowAddRtModal(true);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all self-start md:self-auto cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Room Category
+                </button>
+              )}
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -729,6 +943,7 @@ export const Hotels: React.FC = () => {
                     <th className="pb-3 px-3">Total Inventory</th>
                     <th className="pb-3 px-3">Baseline Rate</th>
                     <th className="pb-3 px-3">Status</th>
+                    {canManageHotels && <th className="pb-3 px-3 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -740,10 +955,32 @@ export const Hotels: React.FC = () => {
                       <td className="py-3.5 px-3 font-bold text-slate-200">{rt.total_inventory} Units</td>
                       <td className="py-3.5 px-3 font-bold text-emerald-400">₹{rt.base_price?.toLocaleString()}</td>
                       <td className="py-3.5 px-3">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded border border-emerald-500/20">
-                          {rt.status}
-                        </span>
+                        <StatusToggleSwitch
+                          status={rt.status || 'ACTIVE'}
+                          onToggle={(e) => handleToggleRoomTypeStatus(rt, e)}
+                          disabled={!canManageHotels}
+                        />
                       </td>
+                      {canManageHotels && (
+                        <td className="py-3.5 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEditRtModal(rt)}
+                              className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Room Category"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingRt(rt)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Room Category"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -1228,6 +1465,271 @@ export const Hotels: React.FC = () => {
               >
                 <Trash2 className="w-4 h-4" />
                 {savingComp ? 'Removing...' : 'Confirm Remove Competitor'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD ROOM CATEGORY MODAL */}
+      {showAddRtModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <BedDouble className="w-5 h-5 text-indigo-400" />
+                Add New Room Category
+              </h3>
+              <button onClick={() => setShowAddRtModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateRoomType} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold">Category Display Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Deluxe Executive Room"
+                  value={rtName}
+                  onChange={(e) => handleRtNameChange(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="text-slate-300 font-bold">Room Category Code (Unique)</label>
+                  <span className="text-[10px] text-indigo-400 italic flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                    Auto-generated from name
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. 8485_DLX"
+                  value={rtCode}
+                  onChange={(e) => {
+                    setRtCode(e.target.value);
+                    setRtCodeManuallyEdited(true);
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 text-indigo-300 font-semibold p-2.5 rounded-xl font-mono uppercase mt-1"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-300 font-bold">Max Occupancy (Guests)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={rtMaxOccupancy}
+                    onChange={(e) => setRtMaxOccupancy(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold">Total Inventory Units</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={rtInventory}
+                    onChange={(e) => setRtInventory(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 font-bold">Baseline Room Rate (₹)</label>
+                <input
+                  type="number"
+                  min="500"
+                  step="100"
+                  value={rtBasePrice}
+                  onChange={(e) => setRtBasePrice(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-800 text-emerald-400 font-bold p-2.5 rounded-xl mt-1"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddRtModal(false)}
+                  className="flex-1 py-2.5 bg-slate-800 text-slate-300 font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRt}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
+                >
+                  {savingRt ? 'Saving...' : 'Create Room Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ROOM CATEGORY MODAL */}
+      {editingRt && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-indigo-400" />
+                Edit Room Category — {editingRt.room_type_code}
+              </h3>
+              <button onClick={() => setEditingRt(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateRoomType} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold">Category Display Name</label>
+                <input
+                  type="text"
+                  value={editRtName}
+                  onChange={(e) => handleEditRtNameChange(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="text-slate-300 font-bold">Room Category Code</label>
+                  <span className="text-[10px] text-indigo-400 italic flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-indigo-400" />
+                    Auto-updates with name
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={editRtCode}
+                  onChange={(e) => {
+                    setEditRtCode(e.target.value);
+                    setEditRtCodeManuallyEdited(true);
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 text-indigo-300 font-semibold p-2.5 rounded-xl font-mono uppercase mt-1"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-300 font-bold">Max Occupancy</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editRtMaxOccupancy}
+                    onChange={(e) => setEditRtMaxOccupancy(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold">Total Inventory Units</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editRtInventory}
+                    onChange={(e) => setEditRtInventory(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-300 font-bold">Baseline Rate (₹)</label>
+                  <input
+                    type="number"
+                    min="500"
+                    step="100"
+                    value={editRtBasePrice}
+                    onChange={(e) => setEditRtBasePrice(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 text-emerald-400 font-bold p-2.5 rounded-xl mt-1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 font-bold">Category Status</label>
+                  <select
+                    value={editRtStatus}
+                    onChange={(e) => setEditRtStatus(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl mt-1 font-bold"
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingRt(null)}
+                  className="flex-1 py-2.5 bg-slate-800 text-slate-300 font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRt}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
+                >
+                  {savingRt ? 'Saving...' : 'Save Room Category Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ROOM CATEGORY CONFIRM MODAL */}
+      {deletingRt && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-rose-400 shrink-0" />
+              <div>
+                <h4 className="text-sm font-bold text-rose-300">Delete Room Category</h4>
+                <p className="text-[11px] text-rose-200/80">Deleting a room category also removes its linked room inventory records.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              Are you sure you want to delete room category <strong className="text-white">{deletingRt.room_type_name} ({deletingRt.room_type_code})</strong>?
+            </p>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingRt(null)}
+                className="flex-1 py-2.5 bg-slate-800 text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteRoomType}
+                disabled={savingRt}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                {savingRt ? 'Deleting...' : 'Confirm Delete Category'}
               </button>
             </div>
           </div>

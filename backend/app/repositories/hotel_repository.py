@@ -75,6 +75,14 @@ class HotelRepository:
         db.refresh(db_rt)
         return db_rt
 
+    def delete_room_type(self, db: Session, room_type_id: int) -> bool:
+        db_rt = self.get_room_type(db, room_type_id)
+        if db_rt:
+            db.delete(db_rt)
+            db.commit()
+            return True
+        return False
+
     # --- RatePlan Operations ---
     def get_rate_plan(self, db: Session, rate_plan_id: int) -> Optional[RatePlan]:
         return db.query(RatePlan).filter(RatePlan.rate_plan_id == rate_plan_id).first()

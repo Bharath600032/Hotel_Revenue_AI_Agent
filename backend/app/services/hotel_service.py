@@ -180,6 +180,54 @@ class HotelService:
         self.get_hotel(db, hotel_id)
         return hotel_repository.get_room_types_by_hotel(db, hotel_id)
 
+    def update_room_type(self, db: Session, hotel_id: int, room_type_id: int, rt_in: RoomTypeUpdate, user_id: int) -> RoomType:
+        self.get_hotel(db, hotel_id)
+        db_rt = hotel_repository.get_room_type(db, room_type_id)
+        if not db_rt or db_rt.hotel_id != hotel_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"Room type ID {room_type_id} not found for this hotel.")
+        
+        updated = hotel_repository.update_room_type(db, db_rt, rt_in)
+        audit = AuditLogs(
+            user_id=user_id,
+            action="UPDATE_ROOM_TYPE",
+            entity_type="RoomType",
+            entity_id=str(room_type_id),
+            new_value=rt_in.model_dump(exclude_unset=True),
+        )
+        db.add(audit)
+        db.commit()
+        return updated
+
+    def delete_room_type(self, db: Session, hotel_id: int, room_type_id: int, user_id: int) -> bool:
+        self.get_hotel(db, hotel_id)
+        db_rt = hotel_repository.get_room_type(db, room_type_id)
+        if not db_rt or db_rt.hotel_id != hotel_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"Room type ID {room_type_id} not found for this hotel.")
+
+        rt_code = db_rt.room_type_code
+        rt_name = db_rt.room_type_name
+
+        from app.models.inventory import RoomInventory
+        from app.models.ai import PriceRecommendations, Forecasts
+        db.query(RoomInventory).filter(RoomInventory.room_type_id == room_type_id).delete(synchronize_session=False)
+        db.query(PriceRecommendations).filter(PriceRecommendations.room_type_id == room_type_id).delete(synchronize_session=False)
+        db.query(Forecasts).filter(Forecasts.room_type_id == room_type_id).delete(synchronize_session=False)
+
+        hotel_repository.delete_room_type(db, room_type_id)
+
+        audit = AuditLogs(
+            user_id=user_id,
+            action="DELETE_ROOM_TYPE",
+            entity_type="RoomType",
+            entity_id=str(room_type_id),
+            old_value={"room_type_code": rt_code, "room_type_name": rt_name},
+        )
+        db.add(audit)
+        db.commit()
+        return True
+
     # --- RatePlan Operations ---
     def create_rate_plan(self, db: Session, hotel_id: int, rp_in: RatePlanCreate, user_id: int) -> RatePlan:
         self.get_hotel(db, hotel_id)

@@ -98,6 +98,32 @@ async def create_room_type(
     return hotel_service.create_room_type(db, hotel_id=hotel_id, rt_in=payload, user_id=current_user.user_id)
 
 
+@router.put("/{hotel_id}/room-types/{room_type_id}", response_model=RoomTypeResponse)
+async def update_room_type(
+    hotel_id: int,
+    room_type_id: int,
+    payload: RoomTypeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
+):
+    """Update room type details."""
+    verify_hotel_access(hotel_id, current_user, db)
+    return hotel_service.update_room_type(db, hotel_id=hotel_id, room_type_id=room_type_id, rt_in=payload, user_id=current_user.user_id)
+
+
+@router.delete("/{hotel_id}/room-types/{room_type_id}", status_code=status.HTTP_200_OK)
+async def delete_room_type(
+    hotel_id: int,
+    room_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
+):
+    """Delete a room type and associated inventory/forecast records."""
+    verify_hotel_access(hotel_id, current_user, db)
+    hotel_service.delete_room_type(db, hotel_id=hotel_id, room_type_id=room_type_id, user_id=current_user.user_id)
+    return {"status": "DELETED", "room_type_id": room_type_id}
+
+
 # --- Rate Plans Endpoints ---
 @router.get("/{hotel_id}/rate-plans", response_model=List[RatePlanResponse])
 async def list_rate_plans(
