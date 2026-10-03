@@ -334,8 +334,10 @@ export const apiService = {
 
 
   // System Architecture Flow
-  getArchitectureFlow: async (): Promise<any> => {
-    const res = await apiClient.get('/architecture-flow');
+  getArchitectureFlow: async (hotelId?: number): Promise<any> => {
+    const res = await apiClient.get('/architecture-flow', {
+      params: { hotel_id: hotelId },
+    });
     return res.data;
   },
 

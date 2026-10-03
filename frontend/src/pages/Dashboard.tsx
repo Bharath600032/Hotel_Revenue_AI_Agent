@@ -181,7 +181,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* 9-STEP AI REVENUE PIPELINE ARCHITECTURE */}
-      <NineStepArchitectureFlow />
+      <NineStepArchitectureFlow hotelId={activeHotelId} refreshKey={refreshKey} onRefresh={handleRefreshData} />
 
       {/* 5-STAGE CONTROLLED AUTONOMOUS PRICING PIPELINE */}
       <FiveStagePricingPipeline hotelId={activeHotelId} onCycleComplete={handleRefreshData} />

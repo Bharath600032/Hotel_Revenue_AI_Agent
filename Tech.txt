@@ -1,0 +1,37 @@
+This application — Hotel Autonomous Revenue AI Agent — is built using a modern full-stack architecture tailored for real-time multi-tenant revenue management, AI pricing automation, and competitive intelligence.
+
+Frontend Stack
+---------------
+Framework: React 18 with TypeScript (.tsx)
+Build Tool: Vite (for fast HMR and optimized production bundling)
+Styling: Tailwind CSS + Custom Vanilla CSS Design System (featuring dark mode glassmorphism, glowing gradients, micro-animations, and dynamic visual state indicators)
+Data Visualization: Recharts (Interactive multi-axis revenue charts, pickup pace curves, demand forecasting graphs, and customized SVG tooltips)
+Icons: Lucide React
+Routing & State: React Router DOM v6, React Context API (AuthContext, HotelContext)
+HTTP Client: Axios (with JWT Bearer interceptors & automated 401 session handling)
+
+
+Backend Stack
+----------------
+Language: Python 3.10+
+Web Framework: FastAPI (Async REST API with OpenAPI/Swagger auto-documentation)
+ASGI Server: Uvicorn
+ORM & Database: SQLAlchemy with SQLite (or PostgreSQL)
+Data Validation & Schemas: Pydantic v2
+Authentication & Security: PyJWT (JSON Web Tokens), Passlib with Bcrypt password hashing, and Role-Based Access Control (RBAC middleware)
+
+
+Autonomous AI & Intelligence Engine
+---------------------------------------
+Multi-Tenant Agent Architecture: Dedicated Hotel Revenue AI Agent instance auto-provisioned for each hotel property with isolated memory scope.
+RAG Knowledge Base: Retrieval-Augmented Generation engine for querying revenue optimization rules, market trends, and policy documents.
+Live Competitor Scraper: Multi-threaded parallel web scraping pipeline using BeautifulSoup4, Requests, and ThreadPoolExecutor to fetch real-time OTA rates (Booking.com, MakeMyTrip, Agoda, Goibibo, Expedia) from Google Hotel search.
+Demand Forecasting Engine: Time-series demand forecasting with seasonality multipliers, attendance-based event impact calculations, and weather correlations.
+Autonomous Pricing Pipeline: 5-Stage rate recommendation pipeline enforcing strict min price floor, max price ceiling, and ±% daily rate shift guardrails.
+
+
+DevOps & Deployment
+----------------------
+Containerization: Docker & Docker Compose
+Deployment Scripts: Automated Windows PowerShell (run_demo.ps1) and Batch (run_demo.bat) runners for single-command environment boot.
+

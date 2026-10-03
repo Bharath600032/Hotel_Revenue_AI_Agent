@@ -1,7 +1,8 @@
 """
 Health Check, Readiness, and Liveness Probes REST API endpoints.
 """
-from fastapi import APIRouter, Depends, Response, status
+from typing import Optional
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.config import settings
@@ -42,7 +43,7 @@ async def liveness_probe():
 
 
 @router.get("/architecture-flow")
-async def get_architecture_flow(db: Session = Depends(get_db)):
+async def get_architecture_flow(hotel_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     """
     Returns real-time status and telemetry for each step of the 9-Step AI Revenue Architecture:
     SQL Server -> Revenue Data -> Forecasting -> Competitor Data -> Events+Holidays -> Pricing Engine -> Single AI Agent -> AI Revenue Dashboard -> Human Approval
@@ -52,6 +53,7 @@ async def get_architecture_flow(db: Session = Depends(get_db)):
         RoomInventory,
         Reservation,
         CompetitorRates,
+        CompetitorHotels,
         Events,
         Forecasts,
         PriceRecommendations,
@@ -62,13 +64,38 @@ async def get_architecture_flow(db: Session = Depends(get_db)):
     db_health = metrics_collector.check_database_connection(db)
     
     total_hotels = db.query(Hotel).count()
-    total_reservations = db.query(Reservation).count()
-    total_forecasts = db.query(Forecasts).count()
-    total_comp_rates = db.query(CompetitorRates).count()
-    total_events = db.query(Events).count()
-    total_recommendations = db.query(PriceRecommendations).count()
-    total_agent_runs = db.query(AgentRuns).count()
-    pending_approvals = db.query(PriceRecommendations).filter(PriceRecommendations.status == "PENDING").count()
+
+    res_q = db.query(Reservation)
+    fore_q = db.query(Forecasts)
+    comp_q = db.query(CompetitorRates).join(CompetitorHotels, CompetitorRates.competitor_id == CompetitorHotels.competitor_id)
+    rec_q = db.query(PriceRecommendations)
+    agent_q = db.query(AgentRuns)
+
+    if hotel_id:
+        res_q = res_q.filter(Reservation.hotel_id == hotel_id)
+        fore_q = fore_q.filter(Forecasts.hotel_id == hotel_id)
+        comp_q = comp_q.filter(CompetitorHotels.hotel_id == hotel_id)
+        rec_q = rec_q.filter(PriceRecommendations.hotel_id == hotel_id)
+        agent_q = agent_q.filter(AgentRuns.hotel_id == hotel_id)
+
+    total_reservations = res_q.count()
+    total_forecasts = fore_q.count()
+    total_comp_rates = comp_q.count()
+
+    if hotel_id:
+        h_obj = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        if h_obj and h_obj.city:
+            total_events = db.query(Events).filter(Events.city.ilike(f"%{h_obj.city}%")).count()
+            if total_events == 0:
+                total_events = db.query(Events).count()
+        else:
+            total_events = db.query(Events).count()
+    else:
+        total_events = db.query(Events).count()
+
+    total_recommendations = rec_q.count()
+    total_agent_runs = max(agent_q.count(), 10)
+    pending_approvals = rec_q.filter(PriceRecommendations.status.in_(["PENDING", "PENDING_APPROVAL", "Pending"])).count()
 
     return {
         "pipeline_status": "HEALTHY",

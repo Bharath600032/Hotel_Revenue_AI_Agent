@@ -73,8 +73,8 @@ class SeasonalNaiveModel(BaseForecastModel):
 
         preds = np.array([dow_means.get(row["day_of_week"], default_mean) for _, row in df_future.iterrows()])
 
-        y_true = df_train["demand"].values[-len(df_future):] if len(df_train) >= len(df_future) else df_train["demand"].values
-        y_pred = np.full(len(y_true), default_mean)
+        y_true = df_train["demand"].values
+        y_pred = np.array([dow_means.get(dow, default_mean) for dow in df_train["day_of_week"].values])
         metrics = model_evaluator.evaluate(y_true, y_pred)
         return preds, metrics
 

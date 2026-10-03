@@ -42,7 +42,7 @@ async def get_forecasts(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
-    """Retrieve persisted demand forecasts for stay date range."""
+    """Retrieve persisted demand forecasts for stay date range (auto-runs pipeline if empty or flat)."""
     verify_hotel_access(hotel_id, current_user)
     fcs = (
         db.query(Forecasts)
@@ -55,6 +55,34 @@ async def get_forecasts(
         .order_by(Forecasts.stay_date)
         .all()
     )
+
+    # Check if forecasts are empty or flat (all values identical)
+    is_flat = False
+    if fcs and len(fcs) > 1:
+        vals = [f.predicted_demand for f in fcs]
+        if len(set(vals)) <= 1:
+            is_flat = True
+
+    if not fcs or is_flat:
+        forecasting_pipeline.run_pipeline(
+            db,
+            hotel_id=hotel_id,
+            room_type_id=room_type_id,
+            start_date=start_date,
+            horizon_days=30,
+        )
+        fcs = (
+            db.query(Forecasts)
+            .filter(
+                Forecasts.hotel_id == hotel_id,
+                Forecasts.room_type_id == room_type_id,
+                Forecasts.stay_date >= start_date,
+                Forecasts.stay_date <= end_date,
+            )
+            .order_by(Forecasts.stay_date)
+            .all()
+        )
+
     return [
         {
             "stay_date": f.stay_date,

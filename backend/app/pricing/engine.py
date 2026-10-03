@@ -252,10 +252,15 @@ class PricingEngine:
 
         recs = db.query(PriceRecommendations).filter(PriceRecommendations.hotel_id == hotel_id).all()
         
-        pending_count = sum(1 for r in recs if r.status == "PENDING")
-        approved_count = sum(1 for r in recs if r.status == "APPROVED")
-        published_count = sum(1 for r in recs if r.status == "PUBLISHED")
-        rejected_count = sum(1 for r in recs if r.status == "REJECTED")
+        pending_count = sum(
+            1 for r in recs if r.status and r.status.upper() in ["PENDING", "PENDING_APPROVAL"]
+        )
+        published_count = sum(
+            1 for r in recs if r.status and r.status.upper() in ["PUBLISHED", "APPROVED", "APPLIED", "OVERRIDDEN"]
+        )
+        rejected_count = sum(
+            1 for r in recs if r.status and r.status.upper() in ["REJECTED"]
+        )
 
         return {
             "hotel_id": hotel_id,
@@ -263,7 +268,7 @@ class PricingEngine:
             "stage_1_status": "ACTIVE",
             "stage_2_status": "ACTIVE",
             "stage_3_pending_approvals": pending_count,
-            "stage_4_published_prices": published_count + approved_count,
+            "stage_4_published_prices": published_count,
             "stage_5_autonomous_mode": "ACTIVE_CONTROLLED",
             "rejected_count": rejected_count,
             "last_updated": datetime.now(timezone.utc).isoformat(),

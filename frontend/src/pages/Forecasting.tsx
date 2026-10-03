@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import { ForecastItem } from '../types';
+import { ForecastItem, RoomType } from '../types';
 import { LineChart as LineChartIcon, Play, Cpu, Calendar, TrendingUp, CheckCircle2 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -19,6 +19,7 @@ import { useHotel } from '../context/HotelContext';
 export const Forecasting: React.FC = () => {
   const { selectedHotel } = useHotel();
   const hotelId = selectedHotel?.hotel_id || 1;
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomTypeId, setRoomTypeId] = useState(1);
   const [horizonDays, setHorizonDays] = useState(30);
   const [forecasts, setForecasts] = useState<ForecastItem[]>([]);
@@ -26,8 +27,26 @@ export const Forecasting: React.FC = () => {
   const [running, setRunning] = useState(false);
 
   useEffect(() => {
-    loadForecasts();
+    fetchRoomTypes();
+  }, [hotelId]);
+
+  useEffect(() => {
+    if (roomTypeId) {
+      loadForecasts();
+    }
   }, [hotelId, roomTypeId]);
+
+  const fetchRoomTypes = async () => {
+    try {
+      const rts = await apiService.getRoomTypes(hotelId);
+      if (rts && rts.length > 0) {
+        setRoomTypes(rts);
+        setRoomTypeId(rts[0].room_type_id);
+      }
+    } catch (err) {
+      console.error('Failed to load room types:', err);
+    }
+  };
 
   const loadForecasts = async () => {
     try {
@@ -82,11 +101,21 @@ export const Forecasting: React.FC = () => {
           <select
             value={roomTypeId}
             onChange={(e) => setRoomTypeId(Number(e.target.value))}
-            className="bg-slate-900 border border-slate-800 text-white text-xs px-3 py-2 rounded-xl"
+            className="bg-slate-900 border border-slate-800 text-white text-xs px-3 py-2 rounded-xl cursor-pointer"
           >
-            <option value={1}>Deluxe Ocean View (RT1)</option>
-            <option value={2}>Executive Suite (RT2)</option>
-            <option value={3}>Standard King (RT3)</option>
+            {roomTypes.length > 0 ? (
+              roomTypes.map((rt) => (
+                <option key={rt.room_type_id} value={rt.room_type_id}>
+                  {rt.room_type_name} ({rt.room_type_code})
+                </option>
+              ))
+            ) : (
+              <>
+                <option value={1}>Superior Comfort Room (SUP)</option>
+                <option value={2}>Deluxe Executive Room (DLX)</option>
+                <option value={3}>Luxury Executive Suite (STE)</option>
+              </>
+            )}
           </select>
 
           <button

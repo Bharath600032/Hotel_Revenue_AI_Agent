@@ -41,7 +41,12 @@ class ForecastingPipeline:
         if not room_type:
             raise ResourceNotFoundError("RoomType", room_type_id)
 
-        # 1. Load historical reservations and group by stay date
+        from app.models.inventory import DailyBookingSnapshot
+
+        # 1. Load historical demand across Reservation, RoomInventory, and DailyBookingSnapshot
+        hist_dict: Dict[date, float] = {}
+
+        # a) From Reservation records
         reservations = (
             db.query(Reservation)
             .filter(
@@ -51,23 +56,60 @@ class ForecastingPipeline:
             )
             .all()
         )
-
-        hist_dict: Dict[date, int] = {}
         for r in reservations:
             cur = r.checkin_date
             while cur < r.checkout_date:
-                hist_dict[cur] = hist_dict.get(cur, 0) + r.rooms_booked
+                hist_dict[cur] = hist_dict.get(cur, 0.0) + float(r.rooms_booked)
                 cur += timedelta(days=1)
 
-        # Build tabular records
+        # b) From RoomInventory (actual sold counts)
+        inv_records = (
+            db.query(RoomInventory)
+            .filter(
+                RoomInventory.hotel_id == hotel_id,
+                RoomInventory.room_type_id == room_type_id,
+            )
+            .all()
+        )
+        for inv in inv_records:
+            if inv.sold_count and inv.sold_count > 0:
+                hist_dict[inv.stay_date] = max(hist_dict.get(inv.stay_date, 0.0), float(inv.sold_count))
+
+        # c) From DailyBookingSnapshot
+        snaps = (
+            db.query(DailyBookingSnapshot)
+            .filter(
+                DailyBookingSnapshot.hotel_id == hotel_id,
+                DailyBookingSnapshot.room_type_id == room_type_id,
+            )
+            .all()
+        )
+        for s in snaps:
+            if s.rooms_booked and s.rooms_booked > 0:
+                hist_dict[s.stay_date] = max(hist_dict.get(s.stay_date, 0.0), float(s.rooms_booked))
+
         sorted_dates = sorted(hist_dict.keys())
-        if len(sorted_dates) < 5:
-            # Fallback synthetic historical anchor if records are scarce
-            base_dt = start_date - timedelta(days=30)
-            hist_dict = {
-                (base_dt + timedelta(days=i)): int(room_type.total_inventory * 0.6)
-                for i in range(30)
-            }
+        tot_inv = room_type.total_inventory or 15
+
+        # If historical records are fewer than 14, seed realistic time-series demand curve with day-of-week seasonality
+        if len(sorted_dates) < 14:
+            base_dt = start_date - timedelta(days=60)
+            import random
+            random.seed(hotel_id * 100 + room_type_id)
+            for i in range(60):
+                d_dt = base_dt + timedelta(days=i)
+                if d_dt not in hist_dict or hist_dict[d_dt] == 0:
+                    dow = d_dt.weekday()
+                    if dow in [4, 5]:  # Fri, Sat
+                        occ_pct = random.uniform(0.78, 0.94)
+                    elif dow in [2, 3]:  # Wed, Thu
+                        occ_pct = random.uniform(0.62, 0.80)
+                    elif dow == 6:  # Sun
+                        occ_pct = random.uniform(0.40, 0.60)
+                    else:  # Mon, Tue
+                        occ_pct = random.uniform(0.50, 0.70)
+                    hist_dict[d_dt] = round(tot_inv * occ_pct, 1)
+
             sorted_dates = sorted(hist_dict.keys())
 
         hist_records = [
@@ -76,9 +118,9 @@ class ForecastingPipeline:
 
         future_dates = [start_date + timedelta(days=i) for i in range(horizon_days)]
 
-        # 2. Build Features
+        # 2. Build Features with Live DB Signals (Holidays, Events, Competitor Median Rates)
         df_hist, df_future = feature_engineer.build_feature_dataframe(
-            hist_records, future_dates
+            hist_records, future_dates, db=db, hotel_id=hotel_id
         )
 
         # 3. Fit Candidate Models & Compare

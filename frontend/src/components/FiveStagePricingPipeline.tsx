@@ -17,6 +17,7 @@ import {
 
 interface FiveStagePricingPipelineProps {
   hotelId?: number;
+  refreshKey?: number;
   onCycleComplete?: () => void;
 }
 
@@ -33,6 +34,7 @@ interface PipelineStatus {
 
 export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> = ({
   hotelId = 1,
+  refreshKey = 0,
   onCycleComplete,
 }) => {
   const [status, setStatus] = useState<PipelineStatus | null>(null);
@@ -42,6 +44,14 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
 
   useEffect(() => {
     fetchStatus();
+  }, [hotelId, refreshKey]);
+
+  // Automatic status polling every 5 minutes (300,000 ms)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchStatus();
+    }, 300000);
+    return () => clearInterval(interval);
   }, [hotelId]);
 
   const fetchStatus = async () => {
@@ -58,11 +68,11 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
       setIsRunning(true);
       setActiveStage(1);
 
-      // Simulate step-by-step visual feedback for each stage
-      setTimeout(() => setActiveStage(2), 600);
-      setTimeout(() => setActiveStage(3), 1200);
-      setTimeout(() => setActiveStage(4), 1800);
-      setTimeout(() => setActiveStage(5), 2400);
+      // Visual step-by-step feedback
+      setTimeout(() => setActiveStage(2), 500);
+      setTimeout(() => setActiveStage(3), 1000);
+      setTimeout(() => setActiveStage(4), 1500);
+      setTimeout(() => setActiveStage(5), 2000);
 
       const result = await apiService.runAutonomousCycle(hotelId, 30);
       setCycleMetrics(result);
@@ -71,10 +81,11 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
     } catch (err) {
       console.error('Autonomous pricing cycle failed:', err);
     } finally {
-      setTimeout(() => {
+      setTimeout(async () => {
         setIsRunning(false);
         setActiveStage(null);
-      }, 2800);
+        await fetchStatus();
+      }, 2200);
     }
   };
 

@@ -5,10 +5,11 @@ import { ShieldAlert, CheckCircle2, Edit3, XCircle, RefreshCw, AlertCircle, Chev
 
 interface ApprovalQueueWidgetProps {
   hotelId?: number;
+  refreshKey?: number;
   onUpdate?: () => void;
 }
 
-export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelId = 1, onUpdate }) => {
+export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelId = 1, refreshKey = 0, onUpdate }) => {
   const [pendingItems, setPendingItems] = useState<PriceRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
 
   useEffect(() => {
     fetchPendingQueue();
-  }, [hotelId]);
+  }, [hotelId, refreshKey]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -56,6 +57,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
       setActionSuccess(`Approved rate ₹${rec.recommended_rate.toLocaleString()} for ${rec.stay_date}`);
       await fetchPendingQueue();
       if (onUpdate) onUpdate();
+      window.dispatchEvent(new Event('pipeline-data-updated'));
     } catch (err) {
       console.error('Failed to approve recommendation:', err);
     }
@@ -74,6 +76,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
       setOverrideModalRec(null);
       await fetchPendingQueue();
       if (onUpdate) onUpdate();
+      window.dispatchEvent(new Event('pipeline-data-updated'));
     } catch (err) {
       console.error('Failed to override rate:', err);
     }
@@ -91,6 +94,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
       setRejectModalRec(null);
       await fetchPendingQueue();
       if (onUpdate) onUpdate();
+      window.dispatchEvent(new Event('pipeline-data-updated'));
     } catch (err) {
       console.error('Failed to reject rate:', err);
     }

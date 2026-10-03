@@ -1,6 +1,9 @@
 """
 Main FastAPI Application Entrypoint with structured logging, exception handlers, and security middleware.
 """
+import warnings
+warnings.filterwarnings("ignore", message=".*Python 3.8 is no longer supported.*")
+
 import uuid
 import time
 from fastapi import FastAPI, Request, status
