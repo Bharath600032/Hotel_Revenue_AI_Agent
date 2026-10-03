@@ -37,9 +37,12 @@ class ForecastingPipeline:
         horizon_days: int = 30,
     ) -> ForecastResponse:
         # Check room type exists
-        room_type = db.query(RoomType).filter(RoomType.room_type_id == room_type_id).first()
+        room_type = db.query(RoomType).filter(RoomType.room_type_id == room_type_id, RoomType.hotel_id == hotel_id).first()
         if not room_type:
-            raise ResourceNotFoundError("RoomType", room_type_id)
+            room_type = db.query(RoomType).filter(RoomType.hotel_id == hotel_id).first()
+            if not room_type:
+                raise ResourceNotFoundError("RoomType", room_type_id)
+            room_type_id = room_type.room_type_id
 
         from app.models.inventory import DailyBookingSnapshot
 

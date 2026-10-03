@@ -313,7 +313,7 @@ class GetHolidayDataTool(BaseTool):
 
 # --- Tool 11: get_event_data ---
 class GetEventDataSchema(BaseModel):
-    city: str = Field(..., description="City name")
+    city: Optional[str] = Field(None, description="City name")
     start_date: str = Field(..., description="Start date YYYY-MM-DD")
     end_date: str = Field(..., description="End date YYYY-MM-DD")
 
@@ -327,17 +327,24 @@ class GetEventDataTool(BaseTool):
         e_dt = date.fromisoformat(kwargs["end_date"])
         from app.models.events import Events
 
+        target_city = kwargs.get("city")
+        if not target_city and "hotel_id" in kwargs:
+            h = hotel_repository.get_by_id(db, kwargs["hotel_id"])
+            if h:
+                target_city = h.city
+        target_city = target_city or "Chennai"
+
         evs = (
             db.query(Events)
             .filter(
-                Events.city.ilike(f"%{kwargs['city']}%"),
+                Events.city.ilike(f"%{target_city}%"),
                 Events.end_date >= s_dt,
                 Events.start_date <= e_dt,
             )
             .all()
         )
         return {
-            "city": kwargs["city"],
+            "city": target_city,
             "events": [
                 {
                     "event_name": e.event_name,
@@ -369,12 +376,12 @@ class GetCompetitorRatesTool(BaseTool):
         analysis = competitor_engine.analyze_market_rates(
             db, hotel_id=kwargs["hotel_id"], stay_date=s_dt, my_rate=base_price
         )
-        return analysis.model_dump()
+        return analysis.model_dump(mode="json")
 
 
 # --- Tool 13: get_weather ---
 class GetWeatherSchema(BaseModel):
-    city: str = Field(..., description="City name")
+    city: Optional[str] = Field(None, description="City name")
     start_date: str = Field(..., description="Start date YYYY-MM-DD")
     end_date: str = Field(..., description="End date YYYY-MM-DD")
 
@@ -386,10 +393,18 @@ class GetWeatherTool(BaseTool):
     def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
         s_dt = date.fromisoformat(kwargs["start_date"])
         e_dt = date.fromisoformat(kwargs["end_date"])
+
+        target_city = kwargs.get("city")
+        if not target_city and "hotel_id" in kwargs:
+            h = hotel_repository.get_by_id(db, kwargs["hotel_id"])
+            if h:
+                target_city = h.city
+        target_city = target_city or "Chennai"
+
         w_list = (
             db.query(Weather)
             .filter(
-                Weather.city.ilike(f"%{kwargs['city']}%"),
+                Weather.city.ilike(f"%{target_city}%"),
                 Weather.date >= s_dt,
                 Weather.date <= e_dt,
             )
@@ -397,7 +412,7 @@ class GetWeatherTool(BaseTool):
         )
         if not w_list:
             return {
-                "city": kwargs["city"],
+                "city": target_city,
                 "weather": [
                     {
                         "date": kwargs["start_date"],
@@ -408,7 +423,7 @@ class GetWeatherTool(BaseTool):
                 ],
             }
         return {
-            "city": kwargs["city"],
+            "city": target_city,
             "weather": [
                 {
                     "date": str(w.date),
@@ -424,7 +439,7 @@ class GetWeatherTool(BaseTool):
 # --- Tool 14: run_demand_forecast ---
 class RunDemandForecastSchema(BaseModel):
     hotel_id: int = Field(..., description="Target Hotel ID")
-    room_type_id: int = Field(..., description="Room Type ID")
+    room_type_id: Optional[int] = Field(None, description="Optional Room Type ID")
     stay_date: str = Field(..., description="Target stay date YYYY-MM-DD")
     horizon_days: int = Field(default=30, description="Forecast horizon days")
 
@@ -434,21 +449,31 @@ class RunDemandForecastTool(BaseTool):
     args_schema = RunDemandForecastSchema
 
     def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        h_id = kwargs["hotel_id"]
         s_dt = date.fromisoformat(kwargs["stay_date"])
+        rt_id = kwargs.get("room_type_id")
+
+        if not rt_id:
+            rts = hotel_repository.get_room_types_by_hotel(db, h_id)
+            if rts:
+                rt_id = rts[0].room_type_id
+            else:
+                rt_id = 1
+
         fc_res = forecasting_pipeline.run_pipeline(
             db,
-            hotel_id=kwargs["hotel_id"],
-            room_type_id=kwargs["room_type_id"],
+            hotel_id=h_id,
+            room_type_id=rt_id,
             start_date=s_dt,
             horizon_days=kwargs.get("horizon_days", 30),
         )
-        return fc_res.model_dump()
+        return fc_res.model_dump(mode="json")
 
 
 # --- Tool 15: calculate_pricing_recommendation ---
 class CalculatePricingRecommendationSchema(BaseModel):
     hotel_id: int = Field(..., description="Target Hotel ID")
-    room_type_id: int = Field(..., description="Room Type ID")
+    room_type_id: Optional[int] = Field(None, description="Optional Room Type ID")
     stay_date: str = Field(..., description="Target stay date YYYY-MM-DD")
 
 class CalculatePricingRecommendationTool(BaseTool):
@@ -457,11 +482,21 @@ class CalculatePricingRecommendationTool(BaseTool):
     args_schema = CalculatePricingRecommendationSchema
 
     def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        h_id = kwargs["hotel_id"]
         s_dt = date.fromisoformat(kwargs["stay_date"])
+        rt_id = kwargs.get("room_type_id")
+
+        if not rt_id:
+            rts = hotel_repository.get_room_types_by_hotel(db, h_id)
+            if rts:
+                rt_id = rts[0].room_type_id
+            else:
+                rt_id = 1
+
         rec = pricing_engine.calculate_recommendation(
-            db, hotel_id=kwargs["hotel_id"], room_type_id=kwargs["room_type_id"], stay_date=s_dt
+            db, hotel_id=h_id, room_type_id=rt_id, stay_date=s_dt
         )
-        return rec.model_dump()
+        return rec.model_dump(mode="json")
 
 
 # --- Tool 16: validate_price_guardrails ---
@@ -487,7 +522,7 @@ class ValidatePriceGuardrailsTool(BaseTool):
             proposed_rate=kwargs["proposed_rate"],
             current_rate=kwargs["current_rate"],
         )
-        return res.model_dump()
+        return res.model_dump(mode="json")
 
 
 # --- Tool 17: get_hotel_policies ---

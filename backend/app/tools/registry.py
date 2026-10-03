@@ -37,6 +37,26 @@ from app.core.logging import get_logger
 logger = get_logger("app.tools.registry")
 
 
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
+
+
+def make_json_serializable(obj: Any) -> Any:
+    """Recursively convert date, datetime, Decimal, and Enum objects into JSON-compatible primitives."""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, Enum):
+        return obj.value
+    elif isinstance(obj, dict):
+        return {str(k): make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
+        return [make_json_serializable(i) for i in obj]
+    return obj
+
+
 class ToolRegistry:
     """Central registry holding all 22 specialized agent tools."""
 
@@ -97,12 +117,14 @@ class ToolRegistry:
 
         # Log Tool Call in DB if agent_run_id provided
         if agent_run_id:
+            safe_args = make_json_serializable(arguments)
+            safe_result = make_json_serializable(result)
             db_call = AgentToolCalls(
                 tool_call_id=tool_call_id,
                 agent_run_id=agent_run_id,
                 tool_name=tool_name,
-                arguments=arguments,
-                result=result,
+                arguments=safe_args,
+                result=safe_result,
                 status=status_str,
                 execution_time_ms=execution_time_ms,
             )
