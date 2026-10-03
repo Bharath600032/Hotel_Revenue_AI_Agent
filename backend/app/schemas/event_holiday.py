@@ -54,6 +54,7 @@ class CalendarImpactResponse(BaseModel):
     active_events: List[EventResponse]
     holiday_demand_multiplier: float
     event_demand_multiplier: float
+    weather_demand_multiplier: float = 1.0
     composite_demand_multiplier: float
     demand_classification: str  # NORMAL, MODERATE_UPLIFT, HIGH_DEMAND, EXTREME_DEMAND
     explanation: str

@@ -24,12 +24,15 @@ class HotelRepository:
         limit: int = 100,
         city: Optional[str] = None,
         status: Optional[str] = None,
+        allowed_hotel_ids: Optional[List[int]] = None,
     ) -> List[Hotel]:
         query = db.query(Hotel)
         if city:
             query = query.filter(Hotel.city.ilike(f"%{city}%"))
         if status:
             query = query.filter(Hotel.status == status)
+        if allowed_hotel_ids is not None:
+            query = query.filter(Hotel.hotel_id.in_(allowed_hotel_ids))
         return query.offset(skip).limit(limit).all()
 
     def create(self, db: Session, hotel_in: HotelCreate) -> Hotel:

@@ -54,13 +54,25 @@ def require_roles(allowed_roles: List[str]) -> Callable:
     return role_checker
 
 
-def verify_hotel_access(hotel_id: int, current_user: User) -> None:
+def verify_hotel_access(hotel_id: int, current_user: User, db: Optional[Session] = None) -> None:
     """
     Verify that user has authorization to view/modify data for the specified hotel_id.
-    Super Admin, Administrators, and Revenue Managers have global access across all properties.
-    Other roles are constrained by user.assigned_hotels list.
+    - INACTIVE hotels can ONLY be accessed or viewed by 'Super Admin'.
+    - Active hotels: Super Admin, Administrators, and Revenue Managers have global access across all properties.
+    - Other roles are constrained by user.assigned_hotels list.
     """
-    if current_user.role in ["Super Admin", "Administrator", "Revenue Manager"]:
+    if db is not None:
+        from app.models.hotel import Hotel
+        target_hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        if target_hotel and target_hotel.status != "ACTIVE" and current_user.role != "Super Admin":
+            raise PermissionDeniedError(
+                f"Hotel ID '{hotel_id}' ({target_hotel.hotel_name}) is INACTIVE. Only Super Admin can view details or process data for inactive properties."
+            )
+
+    if current_user.role == "Super Admin":
+        return
+
+    if current_user.role in ["Administrator", "Revenue Manager"]:
         return
 
     if not current_user.assigned_hotels:
@@ -73,3 +85,4 @@ def verify_hotel_access(hotel_id: int, current_user: User) -> None:
     ]
     if hotel_id not in assigned_ids:
         raise PermissionDeniedError(f"Access denied for hotel ID '{hotel_id}'.")
+

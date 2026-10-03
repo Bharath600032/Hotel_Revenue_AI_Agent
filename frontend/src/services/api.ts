@@ -15,6 +15,7 @@ import {
   ForecastItem,
   AuditLogItem,
   RAGSearchResult,
+  WeatherForecastResponse,
 } from '../types';
 
 const API_BASE_URL = '/api/v1';
@@ -347,6 +348,14 @@ export const apiService = {
       hotel_id: hotelId,
       message,
       session_id: sessionId,
+    });
+    return res.data;
+  },
+
+  // Weather Intelligence
+  getWeatherForecast: async (hotelId: number, days: number = 14): Promise<WeatherForecastResponse> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/weather`, {
+      params: { days },
     });
     return res.data;
   },

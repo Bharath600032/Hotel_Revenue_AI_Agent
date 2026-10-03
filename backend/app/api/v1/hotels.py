@@ -25,14 +25,14 @@ async def list_hotels(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve list of hotels accessible to current user."""
-    return hotel_service.list_hotels(db, skip=skip, limit=limit, city=city)
+    return hotel_service.list_hotels(db, skip=skip, limit=limit, city=city, user=current_user)
 
 
 @router.post("", response_model=HotelResponse, status_code=status.HTTP_201_CREATED)
 async def create_hotel(
     payload: HotelCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Create a new property master record."""
     return hotel_service.create_hotel(db, hotel_in=payload, user_id=current_user.user_id)
@@ -42,10 +42,10 @@ async def create_hotel(
 async def get_hotel(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve details for a specific hotel by ID."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.get_hotel(db, hotel_id=hotel_id)
 
 
@@ -57,7 +57,7 @@ async def update_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Update hotel master profile."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.update_hotel(db, hotel_id=hotel_id, hotel_in=payload, user_id=current_user.user_id)
 
 
@@ -68,7 +68,7 @@ async def delete_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Delete hotel property and all associated master records."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     hotel_service.delete_hotel(db, hotel_id=hotel_id, user_id=current_user.user_id)
     return {"status": "DELETED", "hotel_id": hotel_id}
 
@@ -79,10 +79,10 @@ async def delete_hotel(
 async def list_room_types(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve room types for a specific hotel."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.list_room_types(db, hotel_id=hotel_id)
 
 
@@ -91,10 +91,10 @@ async def create_room_type(
     hotel_id: int,
     payload: RoomTypeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Create a new room type for a hotel."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.create_room_type(db, hotel_id=hotel_id, rt_in=payload, user_id=current_user.user_id)
 
 
@@ -103,10 +103,10 @@ async def create_room_type(
 async def list_rate_plans(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve rate plans for a specific hotel."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.list_rate_plans(db, hotel_id=hotel_id)
 
 
@@ -115,8 +115,8 @@ async def create_rate_plan(
     hotel_id: int,
     payload: RatePlanCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Create a new rate plan for a hotel."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return hotel_service.create_rate_plan(db, hotel_id=hotel_id, rp_in=payload, user_id=current_user.user_id)

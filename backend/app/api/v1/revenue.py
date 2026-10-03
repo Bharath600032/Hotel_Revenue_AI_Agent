@@ -25,10 +25,10 @@ async def get_revenue_summary(
     start_date: date = Query(..., description="Start stay date"),
     end_date: date = Query(..., description="End stay date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Calculate aggregate revenue KPIs (Occupancy, ADR, RevPAR, TRevPAR, Cancellation Rate)."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return revenue_calculator.calculate_period_summary(
         db, hotel_id=hotel_id, start_date=start_date, end_date=end_date
     )
@@ -39,10 +39,10 @@ async def get_pickup_pace(
     hotel_id: int,
     stay_date: date = Query(..., description="Target stay date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve 1d, 3d, 7d, 14d, 30d pickup pace for target stay date."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return revenue_calculator.calculate_pickup_pace(db, hotel_id=hotel_id, stay_date=stay_date)
 
 
@@ -52,10 +52,10 @@ async def get_channel_performance(
     start_date: date = Query(..., description="Start stay date"),
     end_date: date = Query(..., description="End stay date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve channel revenue mix and percentage contribution."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return revenue_calculator.calculate_channel_performance(
         db, hotel_id=hotel_id, start_date=start_date, end_date=end_date
     )
@@ -65,8 +65,8 @@ async def get_channel_performance(
 async def get_day_of_week_performance(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve day-of-week demand performance multipliers."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return revenue_calculator.calculate_day_of_week_performance(db, hotel_id=hotel_id)

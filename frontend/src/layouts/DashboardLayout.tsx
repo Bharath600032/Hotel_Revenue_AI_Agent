@@ -296,6 +296,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                                 {h.hotel_code}
                               </span>
                               <span>{h.hotel_name}</span>
+                              {h.status !== 'ACTIVE' && (
+                                <span className="text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1 py-0.2 rounded">
+                                  INACTIVE
+                                </span>
+                              )}
                             </div>
                             <p className={`text-[10px] mt-0.5 ${isCurrent ? 'text-indigo-200' : 'text-slate-400'}`}>
                               📍 {h.city}, {h.country} ({h.total_rooms} Rooms)

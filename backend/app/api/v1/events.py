@@ -217,8 +217,8 @@ async def get_calendar_impact(
     hotel_id: int,
     stay_date: date = Query(..., description="Target stay date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Evaluate combined holiday and event demand multiplier for property and stay date."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return event_holiday_engine.evaluate_calendar_impact(db, hotel_id=hotel_id, stay_date=stay_date)

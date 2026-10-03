@@ -79,8 +79,13 @@ class EventHolidayEngine:
         h_mult, h_exp = self.calculate_holiday_multiplier(active_holidays)
         e_mult, e_exp = self.calculate_event_multiplier(active_events)
 
-        # Composite demand multiplier = max(h_mult, e_mult) + 0.5 * min(h_mult, e_mult) - 0.5
-        composite_mult = round(max(h_mult, e_mult) + (min(h_mult, e_mult) - 1.0) * 0.5, 2)
+        # 3. Fetch weather demand multiplier
+        from app.weather.engine import weather_engine
+        w_mult, w_exp = weather_engine.get_daily_weather_multiplier(db, hotel_id=hotel_id, stay_date=stay_date)
+
+        # Composite demand multiplier = (max(h_mult, e_mult) + (min(h_mult, e_mult) - 1.0) * 0.5) * w_mult
+        base_cal_mult = max(h_mult, e_mult) + (min(h_mult, e_mult) - 1.0) * 0.5
+        composite_mult = round(base_cal_mult * w_mult, 2)
 
         # Classify demand level
         if composite_mult >= 1.30:
@@ -89,10 +94,12 @@ class EventHolidayEngine:
             classification = "HIGH_DEMAND"
         elif composite_mult > 1.02:
             classification = "MODERATE_UPLIFT"
+        elif composite_mult < 0.95:
+            classification = "DEPRESSED_DEMAND"
         else:
             classification = "NORMAL"
 
-        explanation = f"{h_exp} {e_exp}".strip()
+        explanation = f"{h_exp} {e_exp} [Weather Impact: {w_exp}]".strip()
 
         return CalendarImpactResponse(
             hotel_id=hotel_id,
@@ -101,6 +108,7 @@ class EventHolidayEngine:
             active_events=[EventResponse.model_validate(e) for e in active_events],
             holiday_demand_multiplier=h_mult,
             event_demand_multiplier=e_mult,
+            weather_demand_multiplier=w_mult,
             composite_demand_multiplier=composite_mult,
             demand_classification=classification,
             explanation=explanation,

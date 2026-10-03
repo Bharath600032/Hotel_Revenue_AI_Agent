@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import { EventItem, HolidayItem, CalendarImpact } from '../types';
+import { EventItem, HolidayItem, CalendarImpact, WeatherForecastResponse } from '../types';
 import {
   Calendar,
   Flame,
@@ -15,6 +15,13 @@ import {
   Sparkles,
   Archive,
   Clock,
+  Sun,
+  CloudSun,
+  CloudRain,
+  CloudLightning,
+  Thermometer,
+  Droplets,
+  Wind,
 } from 'lucide-react';
 import { useHotel } from '../context/HotelContext';
 
@@ -30,6 +37,8 @@ export const Events: React.FC = () => {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [holidays, setHolidays] = useState<HolidayItem[]>([]);
   const [impact, setImpact] = useState<CalendarImpact | null>(null);
+  const [weatherForecast, setWeatherForecast] = useState<WeatherForecastResponse | null>(null);
+  const [weatherHorizon, setWeatherHorizon] = useState<number>(14);
   const [loading, setLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -62,19 +71,21 @@ export const Events: React.FC = () => {
 
   useEffect(() => {
     fetchEventData();
-  }, [stayDate, activeCity, hotelId]);
+  }, [stayDate, activeCity, hotelId, weatherHorizon]);
 
   const fetchEventData = async () => {
     try {
       setLoading(true);
-      const [evtData, holData, impData] = await Promise.all([
+      const [evtData, holData, impData, wData] = await Promise.all([
         apiService.getEvents(activeCity),
         apiService.getHolidays('India'),
         apiService.getCalendarImpact(hotelId, stayDate),
+        apiService.getWeatherForecast(hotelId, weatherHorizon).catch(() => null),
       ]);
       setEvents(evtData);
       setHolidays(holData);
       setImpact(impData);
+      if (wData) setWeatherForecast(wData);
     } catch (err) {
       console.error('Failed to load event data:', err);
     } finally {

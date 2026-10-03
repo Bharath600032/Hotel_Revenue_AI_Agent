@@ -26,10 +26,10 @@ async def get_inventory(
     end_date: date = Query(..., description="End stay date"),
     room_type_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Query room inventory levels for stay date range."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return inventory_repository.get_range(
         db, hotel_id=hotel_id, start_date=start_date, end_date=end_date, room_type_id=room_type_id
     )
@@ -40,10 +40,10 @@ async def update_inventory(
     hotel_id: int,
     payload: RoomInventoryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Upsert room inventory counts for a stay date."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return inventory_repository.upsert(
         db,
         hotel_id=hotel_id,
@@ -65,10 +65,10 @@ async def list_reservations(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """List hotel reservations with filters and pagination."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return reservation_repository.get_multi(
         db,
         hotel_id=hotel_id,
@@ -85,10 +85,10 @@ async def create_reservation(
     hotel_id: int,
     payload: ReservationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Create a new single reservation."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return reservation_repository.create(db, hotel_id=hotel_id, res_in=payload)
 
 
@@ -98,10 +98,10 @@ async def preview_import(
     hotel_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Dry-run preview and schema validation for CSV/Excel/JSON upload."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     contents = await file.read()
     return import_service.preview_import(db, hotel_id=hotel_id, file_bytes=contents, filename=file.filename)
 
@@ -111,10 +111,10 @@ async def process_import(
     hotel_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Execute batch data import with database transaction and row-level error log."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     contents = await file.read()
     return import_service.process_import(
         db, hotel_id=hotel_id, file_bytes=contents, filename=file.filename, user_id=current_user.user_id

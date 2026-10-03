@@ -20,6 +20,7 @@ from app.api.v1 import (
     health,
     audit,
     users,
+    weather,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -30,6 +31,7 @@ api_router.include_router(revenue.router)
 api_router.include_router(forecasts.router)
 api_router.include_router(competitors.router)
 api_router.include_router(events.router)
+api_router.include_router(weather.router)
 api_router.include_router(pricing.router)
 api_router.include_router(guardrails.router)
 api_router.include_router(rag.router)

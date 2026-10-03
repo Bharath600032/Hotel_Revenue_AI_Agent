@@ -26,10 +26,10 @@ async def recommend_price(
     hotel_id: int,
     payload: PriceRecommendationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Analyst"])),
 ):
     """Generate dynamic room rate recommendation for a room type and stay date."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return pricing_engine.calculate_recommendation(
         db, hotel_id=hotel_id, room_type_id=payload.room_type_id, stay_date=payload.stay_date
     )
@@ -40,10 +40,10 @@ async def recommend_price_batch(
     hotel_id: int,
     payload: BatchRecommendationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Generate dynamic rate recommendations for upcoming stay horizon (e.g. 30 to 365 days)."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
 
     if payload.room_type_id:
         room_types = [db.query(RoomType).filter(RoomType.room_type_id == payload.room_type_id).first()]
@@ -76,10 +76,10 @@ async def list_recommendations(
     end_date: Optional[date] = None,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve persisted price recommendations with optional status and stay date filters."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     query = db.query(PriceRecommendations).filter(PriceRecommendations.hotel_id == hotel_id)
     if room_type_id:
         query = query.filter(PriceRecommendations.room_type_id == room_type_id)
@@ -98,10 +98,10 @@ async def run_autonomous_cycle(
     hotel_id: int,
     horizon_days: int = Query(default=30, ge=1, le=90),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Run the 5-Stage Controlled Autonomous Pricing Cycle for the specified stay date horizon."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return pricing_engine.run_autonomous_pricing_cycle(db, hotel_id=hotel_id, horizon_days=horizon_days)
 
 
@@ -109,10 +109,10 @@ async def run_autonomous_cycle(
 async def get_pipeline_status(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
 ):
     """Get real-time metrics across all 5 pricing pipeline stages."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return pricing_engine.get_pipeline_status(db, hotel_id=hotel_id)
 
 
@@ -121,10 +121,10 @@ async def publish_recommendation(
     hotel_id: int,
     recommendation_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Stage 4: Explicitly publish a recommended rate to RoomInventory and live booking engine."""
     from app.services.approval_service import approval_service
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return approval_service.publish_recommendation(db, recommendation_id=recommendation_id, user_id=current_user.user_id)
 

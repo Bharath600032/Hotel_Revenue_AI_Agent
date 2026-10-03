@@ -18,10 +18,10 @@ async def download_pricing_report(
     start_date: date = Query(...),
     end_date: date = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
 ):
     """Download executive 365-day pricing recommendations report as a styled Excel file."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     excel_bytes = report_generator.generate_pricing_recommendations_excel(
         db, hotel_id=hotel_id, start_date=start_date, end_date=end_date
     )

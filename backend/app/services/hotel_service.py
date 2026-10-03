@@ -12,7 +12,7 @@ from app.repositories.hotel_repository import hotel_repository
 from app.schemas.hotel import HotelCreate, HotelUpdate
 from app.schemas.room_type import RoomTypeCreate, RoomTypeUpdate
 from app.schemas.rate_plan import RatePlanCreate, RatePlanUpdate
-from app.core.exceptions import ResourceNotFoundError, DataValidationError
+from app.models.user import User
 
 
 class HotelService:
@@ -29,8 +29,30 @@ class HotelService:
         skip: int = 0,
         limit: int = 100,
         city: Optional[str] = None,
+        user: Optional[User] = None,
     ) -> List[Hotel]:
-        return hotel_repository.get_multi(db, skip=skip, limit=limit, city=city)
+        status_filter = None
+        allowed_ids = None
+
+        if user:
+            # Only Super Admin can view INACTIVE hotels
+            if user.role != "Super Admin":
+                status_filter = "ACTIVE"
+
+            # Non-global roles (Hotel Manager, Analyst, Read-only User) are restricted to assigned_hotels
+            if user.role not in ["Super Admin", "Administrator", "Revenue Manager"]:
+                if user.assigned_hotels:
+                    allowed_ids = [
+                        int(h.strip())
+                        for h in user.assigned_hotels.split(",")
+                        if h.strip().isdigit()
+                    ]
+                else:
+                    allowed_ids = []
+
+        return hotel_repository.get_multi(
+            db, skip=skip, limit=limit, city=city, status=status_filter, allowed_hotel_ids=allowed_ids
+        )
 
     def create_hotel(self, db: Session, hotel_in: HotelCreate, user_id: int) -> Hotel:
         existing = hotel_repository.get_by_code(db, hotel_in.hotel_code)

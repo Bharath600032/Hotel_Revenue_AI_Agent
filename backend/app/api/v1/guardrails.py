@@ -17,10 +17,10 @@ async def validate_guardrails(
     hotel_id: int,
     payload: GuardrailValidationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
 ):
     """Validate a proposed price recommendation against deterministic business safety guardrails."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return pricing_guardrails_engine.validate_and_clamp_rate(
         db,
         hotel_id=hotel_id,

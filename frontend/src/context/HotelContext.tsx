@@ -18,7 +18,7 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [selectedHotel, setSelectedHotelState] = useState<Hotel | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
-  const { isAuthenticated, token } = useAuth();
+  const { user, isAuthenticated, token } = useAuth();
 
   const fetchHotels = useCallback(async () => {
     const activeToken = token || localStorage.getItem('access_token');
@@ -35,11 +35,15 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setHotels(data);
         if (data.length > 0) {
           const savedHotelId = localStorage.getItem('selected_hotel_id');
-          let initialHotel = data[0];
+          let initialHotel = data.find((h: Hotel) => h.status === 'ACTIVE') || data[0];
 
           if (savedHotelId) {
             const found = data.find((h: Hotel) => h.hotel_id === Number(savedHotelId));
-            if (found) initialHotel = found;
+            if (found) {
+              if (found.status === 'ACTIVE' || user?.role === 'Super Admin') {
+                initialHotel = found;
+              }
+            }
           }
 
           setSelectedHotelState(initialHotel);
@@ -53,7 +57,7 @@ export const HotelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setLoadingHotels(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => {
     if (isAuthenticated || localStorage.getItem('access_token')) {

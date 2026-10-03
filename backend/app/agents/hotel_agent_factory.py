@@ -41,7 +41,8 @@ class HotelAgentFactory:
         and competitor rates exist for the specified hotel property.
         """
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-        if not hotel:
+        if not hotel or hotel.status != "ACTIVE":
+            logger.info("skipping_live_data_seeding_for_inactive_or_missing_hotel", hotel_id=hotel_id)
             return
 
         today = date.today()

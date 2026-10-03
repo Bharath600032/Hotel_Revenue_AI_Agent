@@ -23,14 +23,14 @@ router = APIRouter(prefix="/agent", tags=["AI Revenue Agent"])
 async def agent_chat(
     payload: AgentChatRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst"])),
 ):
     """
     Primary endpoint for natural language interaction with the Single Autonomous Revenue AI Agent.
     Executes intent parsing, tool selection, demand analytics, forecasting, and pricing guardrail checks.
     """
     if payload.hotel_id:
-        verify_hotel_access(payload.hotel_id, current_user)
+        verify_hotel_access(payload.hotel_id, current_user, db)
 
     result = single_agent_orchestrator.execute_request(
         db,
@@ -57,12 +57,12 @@ async def list_agent_runs(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve history of agent execution runs."""
     query = db.query(AgentRuns)
     if hotel_id:
-        verify_hotel_access(hotel_id, current_user)
+        verify_hotel_access(hotel_id, current_user, db)
         query = query.filter(AgentRuns.hotel_id == hotel_id)
 
     return query.order_by(AgentRuns.started_at.desc()).offset(skip).limit(limit).all()

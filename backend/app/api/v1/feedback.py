@@ -17,10 +17,10 @@ async def submit_feedback(
     hotel_id: int,
     payload: FeedbackCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Submit revenue manager feedback and post-stay actual outcomes for rate recommendation."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return feedback_service.submit_feedback(
         db, hotel_id=hotel_id, user_id=current_user.user_id, fb_in=payload
     )
@@ -30,8 +30,8 @@ async def submit_feedback(
 async def get_feedback_analytics(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve model acceptance rate percentage and post-stay performance metrics."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return feedback_service.get_analytics(db, hotel_id=hotel_id)

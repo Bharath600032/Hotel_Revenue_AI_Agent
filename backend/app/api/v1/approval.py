@@ -18,10 +18,10 @@ router = APIRouter(prefix="/hotels/{hotel_id}/approvals", tags=["Human Approval 
 async def list_pending_approvals(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Retrieve queue of price recommendations pending human approval."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return approval_service.get_pending_queue(db, hotel_id=hotel_id)
 
 
@@ -30,10 +30,10 @@ async def approve_recommendation(
     hotel_id: int,
     recommendation_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Approve a price recommendation for production deployment."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return approval_service.approve_recommendation(
         db, recommendation_id=recommendation_id, user_id=current_user.user_id
     )
@@ -45,10 +45,10 @@ async def override_recommendation(
     recommendation_id: int,
     payload: OverrideRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Override a price recommendation with custom manager rate."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return approval_service.override_recommendation(
         db,
         recommendation_id=recommendation_id,
@@ -64,10 +64,10 @@ async def reject_recommendation(
     recommendation_id: int,
     payload: RejectRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Reject a price recommendation."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return approval_service.reject_recommendation(
         db,
         recommendation_id=recommendation_id,

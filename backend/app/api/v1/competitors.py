@@ -25,10 +25,10 @@ router = APIRouter(prefix="/hotels/{hotel_id}/competitors", tags=["Competitor In
 async def list_competitor_hotels(
     hotel_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve list of registered competitor hotels for property."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
     if not comps:
         from app.agents.hotel_agent_factory import hotel_agent_factory
@@ -45,7 +45,7 @@ async def add_competitor_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Add a new competitor hotel to the property's competitive set."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     comp = CompetitorHotels(hotel_id=hotel_id, **payload.model_dump())
     db.add(comp)
     db.commit()
@@ -62,7 +62,7 @@ async def update_competitor_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Update competitor hotel details."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     comp = db.query(CompetitorHotels).filter(
         CompetitorHotels.hotel_id == hotel_id,
         CompetitorHotels.competitor_id == competitor_id
@@ -86,7 +86,7 @@ async def delete_competitor_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Delete a competitor hotel from compset."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     comp = db.query(CompetitorHotels).filter(
         CompetitorHotels.hotel_id == hotel_id,
         CompetitorHotels.competitor_id == competitor_id
@@ -108,10 +108,10 @@ async def ingest_competitor_rate(
     hotel_id: int,
     payload: CompetitorRateCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Ingest a competitor rate record."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     rate_rec = CompetitorRates(**payload.model_dump())
     db.add(rate_rec)
     db.commit()
@@ -127,7 +127,7 @@ async def sync_google_competitor_rates(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
 ):
     """Fetch live competitor room rates from Google Search & Travel for all active competitors of the property."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     from app.competitors.google_scraper import google_hotel_scraper
     synced = google_hotel_scraper.sync_google_rates_for_hotel(db, hotel_id=hotel_id, stay_date=stay_date)
     return {
@@ -146,10 +146,10 @@ async def get_competitor_analysis(
     stay_date: date = Query(..., description="Target stay date"),
     my_rate: float = Query(..., gt=0.0, description="Hotel's current rate for comparison"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Analyze competitive set median, min, max, price gap %, and detect data anomalies."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return competitor_engine.analyze_market_rates(
         db, hotel_id=hotel_id, stay_date=stay_date, my_rate=my_rate
     )

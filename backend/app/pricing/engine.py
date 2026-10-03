@@ -211,6 +211,20 @@ class PricingEngine:
         Stage 5: Controlled Autonomous Feedback Loop & Metrics Summary
         """
         from datetime import date, timedelta, datetime, timezone
+        from app.models.hotel import Hotel
+
+        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        if hotel and hotel.status != "ACTIVE":
+            return {
+                "hotel_id": hotel_id,
+                "status": "SKIPPED_INACTIVE",
+                "message": f"Hotel '{hotel.hotel_name}' is INACTIVE. Autonomous pricing cycle skipped.",
+                "stage_1_data_points_analyzed": 0,
+                "stage_2_recommendations_generated": 0,
+                "stage_3_pending_approvals": 0,
+                "stage_4_auto_published": 0,
+                "stage_5_autonomous_mode": "INACTIVE_SKIPPED",
+            }
 
         today = date.today()
         room_types = db.query(RoomType).filter(RoomType.hotel_id == hotel_id).all()

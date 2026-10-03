@@ -20,10 +20,10 @@ async def run_forecast(
     hotel_id: int,
     payload: ForecastRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Analyst"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Analyst"])),
 ):
     """Execute multi-model demand forecasting pipeline for room type and stay horizon."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     return forecasting_pipeline.run_pipeline(
         db,
         hotel_id=hotel_id,
@@ -40,10 +40,10 @@ async def get_forecasts(
     start_date: date = Query(...),
     end_date: date = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve persisted demand forecasts for stay date range (auto-runs pipeline if empty or flat)."""
-    verify_hotel_access(hotel_id, current_user)
+    verify_hotel_access(hotel_id, current_user, db)
     fcs = (
         db.query(Forecasts)
         .filter(

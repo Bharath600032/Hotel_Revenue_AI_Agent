@@ -206,3 +206,28 @@ export interface RAGSearchResult {
   similarity_score: number;
 }
 
+export interface DailyWeatherForecast {
+  stay_date: string;
+  city: string;
+  condition: string;
+  weather_code: number;
+  temp_max_c: number;
+  temp_min_c: number;
+  precipitation_mm: number;
+  weather_multiplier: number;
+  weather_impact: 'POSITIVE_DEMAND' | 'NEUTRAL' | 'DEPRESSED_DEMAND';
+  explanation: string;
+}
+
+export interface WeatherForecastResponse {
+  hotel_id: number;
+  hotel_name: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  forecast_horizon_days: number;
+  daily_forecasts: DailyWeatherForecast[];
+  average_weather_multiplier: number;
+  provider: string;
+}
+
