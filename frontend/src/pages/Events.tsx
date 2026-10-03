@@ -240,6 +240,19 @@ export const Events: React.FC = () => {
   const totalArchivedCount =
     archivedRegionalCityEvents.length + archivedHolidayCategoryEvents.length + archivedHolidays.length;
 
+  const getWeatherIcon = (code: number, condition: string) => {
+    if (code === 0 || condition.toLowerCase().includes('sunny')) {
+      return <Sun className="w-5 h-5 text-amber-400" />;
+    }
+    if (code >= 80 || condition.toLowerCase().includes('heavy rain') || condition.toLowerCase().includes('thunderstorm')) {
+      return <CloudLightning className="w-5 h-5 text-purple-400" />;
+    }
+    if (code >= 50 || condition.toLowerCase().includes('rain') || condition.toLowerCase().includes('drizzle')) {
+      return <CloudRain className="w-5 h-5 text-sky-400" />;
+    }
+    return <CloudSun className="w-5 h-5 text-amber-300" />;
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Page Header */}
@@ -249,10 +262,10 @@ export const Events: React.FC = () => {
             <div className="p-2.5 bg-gradient-to-tr from-amber-500 to-indigo-600 rounded-2xl shadow-lg shadow-amber-500/20">
               <Calendar className="w-6 h-6 text-white" />
             </div>
-            Events & Holidays Calendar Impact
+            Events, Holidays & Weather Intelligence
           </h1>
           <p className="text-slate-400 text-xs mt-1">
-            Evaluate high-demand regional events, festival long weekends, and automated yield demand multipliers for{' '}
+            Evaluate high-demand regional events, festival long weekends, 7 & 14 day weather forecasts, and automated yield demand multipliers for{' '}
             <strong className="text-amber-300">{selectedHotel?.hotel_name || 'Selected Property'}</strong> ({activeCity}).
           </p>
         </div>
@@ -317,15 +330,125 @@ export const Events: React.FC = () => {
                 </span>
                 <h3 className="text-xl font-extrabold text-white">Combined Demand Multiplier Evaluation</h3>
                 <p className="text-xs text-slate-300">
-                  Active Events in {activeCity}: <strong className="text-emerald-400 font-bold">{impact.active_events.length}</strong> | Active Holidays: <strong className="text-emerald-400 font-bold">{impact.active_holidays.length}</strong>
+                  Active Events in {activeCity}: <strong className="text-emerald-400 font-bold">{impact.active_events.length}</strong> | Active Holidays: <strong className="text-emerald-400 font-bold">{impact.active_holidays.length}</strong> | Weather Multiplier: <strong className="text-sky-400 font-bold">{(impact.weather_demand_multiplier || 1.0)}x</strong>
+                </p>
+                <p className="text-[11px] text-slate-400 italic mt-1">
+                  {impact.explanation}
                 </p>
               </div>
 
               <div className="p-4 bg-slate-950/80 rounded-2xl border border-amber-500/40 text-center min-w-[180px] shadow-inner">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Demand Multiplier</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Composite Multiplier</span>
                 <p className="text-3xl font-black text-amber-400 mt-0.5">
-                  {impact.combined_demand_multiplier}x
+                  {impact.composite_demand_multiplier || (impact as any).combined_demand_multiplier}x
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Live Weather Forecast & Demand Multiplier Section */}
+          {weatherForecast && (
+            <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-2xl shadow-lg shadow-sky-500/20">
+                    <CloudSun className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-white">
+                        Weather Intelligence & Demand Forecast ({weatherForecast.city})
+                      </h3>
+                      <span className="text-[10px] font-mono bg-sky-500/10 text-sky-300 px-2 py-0.5 rounded-full border border-sky-500/30">
+                        {weatherForecast.provider}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Real-time {weatherForecast.forecast_horizon_days}-day weather forecast & automated demand multipliers for {selectedHotel?.hotel_name}. Average multiplier: <strong className="text-amber-400 font-bold">{weatherForecast.average_weather_multiplier}x</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto">
+                  <button
+                    onClick={() => setWeatherHorizon(7)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      weatherHorizon === 7
+                        ? 'bg-sky-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    7-Day Forecast
+                  </button>
+                  <button
+                    onClick={() => setWeatherHorizon(14)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      weatherHorizon === 14
+                        ? 'bg-sky-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    14-Day Forecast
+                  </button>
+                </div>
+              </div>
+
+              {/* Daily Forecast Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+                {weatherForecast.daily_forecasts.slice(0, weatherHorizon).map((d) => {
+                  const isStay = d.stay_date === stayDate;
+                  const isPositive = d.weather_multiplier > 1.0;
+                  const isDepressed = d.weather_multiplier < 1.0;
+
+                  return (
+                    <div
+                      key={d.stay_date}
+                      onClick={() => setStayDate(d.stay_date)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-2 text-center relative overflow-hidden ${
+                        isStay
+                          ? 'bg-sky-950/60 border-sky-500 shadow-lg ring-1 ring-sky-500/40'
+                          : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700 hover:bg-slate-950'
+                      }`}
+                    >
+                      <div className="text-[11px] font-mono font-bold text-slate-400">
+                        {d.stay_date}
+                      </div>
+
+                      <div className="flex justify-center my-1">
+                        {getWeatherIcon(d.weather_code, d.condition)}
+                      </div>
+
+                      <div className="text-[11px] font-bold text-white truncate px-1" title={d.condition}>
+                        {d.condition}
+                      </div>
+
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-amber-300 font-bold">{Math.round(d.temp_max_c)}°C</span> / {Math.round(d.temp_min_c)}°C
+                      </div>
+
+                      {d.precipitation_mm > 0 && (
+                        <div className="text-[9px] text-sky-300 flex items-center justify-center gap-1">
+                          <Droplets className="w-2.5 h-2.5" />
+                          <span>{d.precipitation_mm}mm</span>
+                        </div>
+                      )}
+
+                      <div className="pt-1 border-t border-slate-800/80">
+                        <span
+                          className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-full border ${
+                            isPositive
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : isDepressed
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              : 'bg-slate-800 text-slate-400 border-slate-700'
+                          }`}
+                        >
+                          {d.weather_multiplier}x
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

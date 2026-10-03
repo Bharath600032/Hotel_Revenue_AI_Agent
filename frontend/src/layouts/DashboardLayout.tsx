@@ -81,7 +81,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         { label: 'Demand Forecasting', icon: LineChart, path: '/forecasting' },
         { label: 'Pricing Engine', icon: DollarSign, path: '/pricing', badge: '5' },
         { label: 'Competitor Intelligence', icon: Users2, path: '/competitors' },
-        { label: 'Events & Holidays', icon: Calendar, path: '/events' },
+        { label: 'Events, Holidays & Weather', icon: Calendar, path: '/events' },
       ],
     },
     {
