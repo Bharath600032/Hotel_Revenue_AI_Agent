@@ -19,6 +19,28 @@ from app.core.logging import get_logger
 logger = get_logger("app.agents.orchestrator")
 
 
+def format_chunk_as_bullet_points(title_str: str, chunk_text: str) -> str:
+    """Format raw chunk text into clean, structured bullet points while stripping testimonials/footers."""
+    lines = [l.strip() for l in chunk_text.split('\n') if l.strip()]
+    bullets = []
+    junk_keywords = ["testimonial", "what clients says", "arun kumar", "priya nair", "copyright", "rights reserved", "designed by"]
+
+    for l in lines:
+        l_lower = l.lower()
+        if any(jk in l_lower for jk in junk_keywords) or l.startswith("Official Hotel Website") or l.startswith("Hotel Website Page"):
+            continue
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', l) if len(s.strip()) > 4]
+        for s in sentences:
+            if any(jk in s.lower() for jk in junk_keywords):
+                continue
+            if not s.startswith('•') and not s.startswith('📌'):
+                bullets.append(f"• {s}")
+            else:
+                bullets.append(s)
+    body = "\n".join(bullets[:5]) if bullets else ""
+    return f"📌 **{title_str}**:\n{body}" if body else ""
+
+
 class SingleAutonomousRevenueAgent:
     """
     Single Autonomous AI Agent orchestrator managing revenue decision loops and memory.
@@ -104,27 +126,6 @@ class SingleAutonomousRevenueAgent:
 
         hotel_obj = hotel_repository.get_by_id(db, target_hotel_id)
         hotel_name = hotel_obj.hotel_name if hotel_obj else f"Hotel Property {target_hotel_id}"
-
-        # Helper to format raw chunk text into clean, structured bullet points while stripping testimonials/footers
-        def format_chunk_as_bullet_points(title_str: str, chunk_text: str) -> str:
-            lines = [l.strip() for l in chunk_text.split('\n') if l.strip()]
-            bullets = []
-            junk_keywords = ["testimonial", "what clients says", "arun kumar", "priya nair", "copyright", "rights reserved", "designed by"]
-            
-            for l in lines:
-                l_lower = l.lower()
-                if any(jk in l_lower for jk in junk_keywords) or l.startswith("Official Hotel Website") or l.startswith("Hotel Website Page"):
-                    continue
-                sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', l) if len(s.strip()) > 4]
-                for s in sentences:
-                    if any(jk in s.lower() for jk in junk_keywords):
-                        continue
-                    if not s.startswith('•') and not s.startswith('📌'):
-                        bullets.append(f"• {s}")
-                    else:
-                        bullets.append(s)
-            body = "\n".join(bullets[:5]) if bullets else ""
-            return f"📌 **{title_str}**:\n{body}" if body else ""
 
         user_lower = user_message.lower()
         is_capacity_query = any(k in user_lower for k in ["total room", "total rooms", "how many room", "how many rooms", "hotel capacity", "property profile", "property details", "number of rooms", "hotel profile"])

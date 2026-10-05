@@ -37,24 +37,20 @@ from app.core.logging import get_logger
 logger = get_logger("app.tools.registry")
 
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
 
 def make_json_serializable(obj: Any) -> Any:
-    """Recursively convert date, datetime, Decimal, and Enum objects into JSON-compatible primitives."""
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    elif isinstance(obj, Decimal):
-        return float(obj)
-    elif isinstance(obj, Enum):
-        return obj.value
-    elif isinstance(obj, dict):
-        return {str(k): make_json_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple, set)):
-        return [make_json_serializable(i) for i in obj]
-    return obj
+    """Fast JSON-compatible primitive conversion using C-optimized json.dumps fallback."""
+    if obj is None or isinstance(obj, (int, float, str, bool)):
+        return obj
+    try:
+        return json.loads(json.dumps(obj, default=str))
+    except Exception:
+        return str(obj)
 
 
 class ToolRegistry:
