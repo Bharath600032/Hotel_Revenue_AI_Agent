@@ -7,7 +7,7 @@ class DeveloperAPIKey(Base):
     __tablename__ = "developer_api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
-    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=False, index=True)
+    hotel_id = Column(Integer, ForeignKey("hotels.hotel_id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     api_key_prefix = Column(String(50), nullable=False)
     api_key_hash = Column(String(255), nullable=False, unique=True, index=True)
@@ -26,7 +26,7 @@ class WebhookSubscription(Base):
     __tablename__ = "webhook_subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=False, index=True)
+    hotel_id = Column(Integer, ForeignKey("hotels.hotel_id"), nullable=False, index=True)
     endpoint_url = Column(String(500), nullable=False)
     secret_key = Column(String(255), nullable=False)
     events = Column(JSON, default=list) # e.g. ["price.updated", "anomalies.detected", "report.generated", "swarm.consensus"]
@@ -44,7 +44,7 @@ class WebhookEventLog(Base):
     __tablename__ = "webhook_event_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    hotel_id = Column(Integer, ForeignKey("hotels.id"), nullable=False, index=True)
+    hotel_id = Column(Integer, ForeignKey("hotels.hotel_id"), nullable=False, index=True)
     subscription_id = Column(Integer, ForeignKey("webhook_subscriptions.id", ondelete="CASCADE"), nullable=False, index=True)
     event_type = Column(String(100), nullable=False)
     payload = Column(JSON, nullable=False)

@@ -23,6 +23,7 @@ import { AlertsNotifications } from './pages/AlertsNotifications';
 import { ExecutiveReportsBI } from './pages/ExecutiveReportsBI';
 import { AgentSwarmArchitecture } from './pages/AgentSwarmArchitecture';
 import { DeveloperPortal } from './pages/DeveloperPortal';
+import { OTAChannelManager } from './pages/OTAChannelManager';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -60,6 +61,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Revenue />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ota-channels"
+              element={
+                <ProtectedRoute>
+                  <OTAChannelManager />
                 </ProtectedRoute>
               }
             />

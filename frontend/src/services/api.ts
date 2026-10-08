@@ -563,7 +563,46 @@ export const apiService = {
     });
     return res.data;
   },
+
+  // OTA Channel Manager & PMS Two-Way Integration Connectors (Option 1)
+  getPMSConnector: async (hotelId: number): Promise<any> => {
+    const res = await apiClient.get(`/channels/pms-connector`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  getOTAChannels: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/channels/ota-channels`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  pushTwoWayRates: async (hotelId: number, data: { room_type: string; recommended_rate_inr: number; target_channels?: string[]; override_reason?: string }): Promise<any> => {
+    const res = await apiClient.post(`/channels/push-rates`, data, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  pullPMSReservations: async (hotelId: number): Promise<any> => {
+    const res = await apiClient.post(`/channels/pull-reservations`, {}, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  getSyncLogs: async (hotelId: number, limit: number = 25): Promise<any[]> => {
+    const res = await apiClient.get(`/channels/sync-logs`, {
+      params: { hotel_id: hotelId, limit },
+    });
+    return res.data;
+  },
 };
+
+export const api = apiService;
+
 
 
 

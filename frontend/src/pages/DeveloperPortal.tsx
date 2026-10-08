@@ -25,7 +25,7 @@ import {
 
 export const DeveloperPortal: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.id || 1;
+  const hotelId = selectedHotel?.hotel_id || (selectedHotel as any)?.id || 1;
 
   const [activeTab, setActiveTab] = useState<'keys' | 'webhooks' | 'logs'>('keys');
   const [loading, setLoading] = useState(true);

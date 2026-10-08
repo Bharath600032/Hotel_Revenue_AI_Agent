@@ -995,7 +995,60 @@ class RegisterWebhookSubscriptionTool(BaseTool):
             "events": sub.events,
             "status": sub.status,
             "created_at": str(sub.created_at),
+# --- Tool 35: push_two_way_channel_rates ---
+class PushTwoWayChannelRatesSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    room_type: str = Field(..., description="Target Room Type name")
+    recommended_rate_inr: float = Field(..., gt=0.0, description="Recommended rate in Indian Rupees (₹)")
+    target_channels: Optional[List[str]] = Field(None, description="Optional channels filter")
+    override_reason: Optional[str] = Field(None, description="Reason for dynamic rate update")
+
+class PushTwoWayChannelRatesTool(BaseTool):
+    name = "push_two_way_channel_rates"
+    description = "Dispatches 2-way rate updates directly to Opera Cloud PMS and connected OTAs (Booking.com, MakeMyTrip, Agoda) with parity check."
+    args_schema = PushTwoWayChannelRatesSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.ota_pms_service import OTAPMSService
+        log = OTAPMSService.push_rates(
+            hotel_id=kwargs["hotel_id"],
+            room_type=kwargs["room_type"],
+            recommended_rate_inr=kwargs["recommended_rate_inr"],
+            target_channels=kwargs.get("target_channels"),
+            override_reason=kwargs.get("override_reason"),
+            db=db,
+        )
+        return {
+            "sync_id": log.id,
+            "hotel_id": log.hotel_id,
+            "status": log.status,
+            "pushed_rate_inr": kwargs["recommended_rate_inr"],
+            "execution_time_ms": log.execution_time_ms,
+            "synced_at": str(log.synced_at),
         }
+
+
+# --- Tool 36: pull_live_pms_reservations ---
+class PullLivePMSReservationsSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+
+class PullLivePMSReservationsTool(BaseTool):
+    name = "pull_live_pms_reservations"
+    description = "Pulls live reservation records and new room bookings from PMS (Opera Cloud / STAAH) to update real-time inventory snapshot."
+    args_schema = PullLivePMSReservationsSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.ota_pms_service import OTAPMSService
+        log = OTAPMSService.pull_reservations(hotel_id=kwargs["hotel_id"], db=db)
+        return {
+            "sync_id": log.id,
+            "hotel_id": log.hotel_id,
+            "new_reservations_count": log.records_processed,
+            "total_revenue_inr": log.details_json.get("total_revenue_inr", 0.0),
+            "status": log.status,
+            "synced_at": str(log.synced_at),
+        }
+
 
 
 

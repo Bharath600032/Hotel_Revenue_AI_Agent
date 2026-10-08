@@ -14,6 +14,7 @@ from app.models.alerts import AlertNotificationRule, AlertNotificationLog
 from app.models.reports_bi import ExecutiveReportSchedule, ReportExportLog
 from app.models.agent_swarm import AgentSwarmMember, SwarmSessionLog
 from app.models.developer_api import DeveloperAPIKey, WebhookSubscription, WebhookEventLog
+from app.models.ota_pms import PMSConnector, OTAChannelConnection, PMSChannelSyncLog
 from app.models.ai import (
     Forecasts,
     PriceRecommendations,
@@ -39,6 +40,7 @@ AlertLog = AlertNotificationLog
 ExecutiveSchedule = ExecutiveReportSchedule
 SwarmMember = AgentSwarmMember
 APIKey = DeveloperAPIKey
+OTAChannel = OTAChannelConnection
 
 __all__ = [
     "Base",
@@ -89,4 +91,8 @@ __all__ = [
     "APIKey",
     "WebhookSubscription",
     "WebhookEventLog",
+    "PMSConnector",
+    "OTAChannelConnection",
+    "OTAChannel",
+    "PMSChannelSyncLog",
 ]

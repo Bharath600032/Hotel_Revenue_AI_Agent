@@ -16,6 +16,7 @@ import {
   Cpu,
   Key,
   Code2,
+  Globe,
   FileSpreadsheet,
   FileText,
   BookOpen,
@@ -84,11 +85,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       title: 'REVENUE & PRICING',
       items: [
         { label: 'Revenue Analytics', icon: TrendingUp, path: '/revenue' },
-        { label: 'Group Displacement & LOS', icon: Users, path: '/group-displacement', badge: 'AI' },
-        { label: 'TRevPAR & Non-Room AI', icon: Utensils, path: '/trevpar', badge: 'AI' },
-        { label: 'Multi-Channel Alerts', icon: Bell, path: '/alerts', badge: 'AI' },
+        { label: 'OTA & PMS Channels', icon: Globe, path: '/ota-channels' },
+        { label: 'Group Displacement & LOS', icon: Users, path: '/group-displacement' },
+        { label: 'TRevPAR & Non-Room AI', icon: Utensils, path: '/trevpar' },
+        { label: 'Multi-Channel Alerts', icon: Bell, path: '/alerts' },
         { label: 'Demand Forecasting', icon: LineChart, path: '/forecasting' },
-        { label: 'Pricing Engine', icon: DollarSign, path: '/pricing', badge: '5' },
+        { label: 'Pricing Engine', icon: DollarSign, path: '/pricing' },
         { label: 'Competitor Intelligence', icon: Users2, path: '/competitors' },
         { label: 'Events, Holidays & Weather', icon: Calendar, path: '/events' },
       ],
@@ -96,17 +98,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     {
       title: 'INTELLIGENCE & AI',
       items: [
-        { label: 'AI Revenue Assistant', icon: Bot, path: '/assistant', badge: 'AI' },
-        { label: 'Multi-Agent Swarm', icon: Cpu, path: '/agent-swarm', badge: 'AI' },
+        { label: 'AI Revenue Assistant', icon: Bot, path: '/assistant' },
+        { label: 'Multi-Agent Swarm', icon: Cpu, path: '/agent-swarm' },
         { label: 'RAG Knowledge Base', icon: BookOpen, path: '/rag' },
       ],
     },
     {
       title: 'SYSTEM & LOGS',
       items: [
-        { label: 'Executive PDF & BI', icon: FileText, path: '/executive-reports', badge: 'AI' },
-        { label: 'Developer & Webhooks', icon: Key, path: '/developer-portal', badge: 'DEV' },
-        { label: 'User & Role Access', icon: UserIcon, path: '/users', badge: 'ADMIN' },
+        { label: 'Executive PDF & BI', icon: FileText, path: '/executive-reports' },
+        { label: 'Developer & Webhooks', icon: Key, path: '/developer-portal' },
+        { label: 'User & Role Access', icon: UserIcon, path: '/users' },
         { label: 'Reports & Exports', icon: FileSpreadsheet, path: '/reports' },
         { label: 'Audit Compliance', icon: History, path: '/audit' },
         { label: 'Settings', icon: Settings, path: '/settings' },
@@ -120,6 +122,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       case '/': return 'Overview';
       case '/hotels': return 'Hotels & Inventory';
       case '/revenue': return 'Revenue Analytics';
+      case '/ota-channels': return 'OTA Channel Manager & PMS Two-Way Integration';
       case '/group-displacement': return 'Group Displacement & LOS AI';
       case '/trevpar': return 'TRevPAR & Non-Room Revenue AI';
       case '/alerts': return 'Automated Multi-Channel Alerts';

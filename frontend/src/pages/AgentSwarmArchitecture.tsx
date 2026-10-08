@@ -23,7 +23,7 @@ import { useHotel } from '../context/HotelContext';
 
 export const AgentSwarmArchitecture: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.hotel_id || 1;
+  const hotelId = selectedHotel?.hotel_id || (selectedHotel as any)?.id || 1;
 
   const [activeTab, setActiveTab] = useState<'live_eval' | 'history' | 'members'>('live_eval');
   const [loading, setLoading] = useState<boolean>(true);

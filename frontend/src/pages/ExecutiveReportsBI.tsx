@@ -25,7 +25,7 @@ import { useHotel } from '../context/HotelContext';
 
 export const ExecutiveReportsBI: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.hotel_id || 1;
+  const hotelId = selectedHotel?.hotel_id || (selectedHotel as any)?.id || 1;
 
   const [activeTab, setActiveTab] = useState<'pdf' | 'bi_studio' | 'schedules'>('pdf');
   const [loading, setLoading] = useState<boolean>(true);

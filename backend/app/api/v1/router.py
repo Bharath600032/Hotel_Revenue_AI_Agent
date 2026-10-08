@@ -27,6 +27,7 @@ from app.api.v1 import (
     pdf_bi_reports,
     agent_swarm,
     developer_api,
+    ota_pms,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -54,4 +55,6 @@ api_router.include_router(alerts.router)
 api_router.include_router(pdf_bi_reports.router)
 api_router.include_router(agent_swarm.router)
 api_router.include_router(developer_api.router)
+api_router.include_router(ota_pms.router)
+
 
