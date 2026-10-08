@@ -669,3 +669,180 @@ class RecordFeedbackTool(BaseTool):
             "accepted": kwargs["accepted"],
             "status": "FEEDBACK_RECORDED",
         }
+
+
+# --- Tool 23: calculate_group_displacement ---
+class CalculateGroupDisplacementSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    group_name: str = Field(..., description="Corporate or group booking entity name")
+    rooms_requested: int = Field(..., ge=1, le=500, description="Rooms requested per night")
+    checkin_date: str = Field(..., description="Check-in date YYYY-MM-DD")
+    checkout_date: str = Field(..., description="Check-out date YYYY-MM-DD")
+    offered_rate: float = Field(..., gt=0.0, description="Offered room rate per night (₹)")
+    room_type_id: Optional[int] = Field(None, description="Optional target room type ID")
+
+class CalculateGroupDisplacementTool(BaseTool):
+    name = "calculate_group_displacement"
+    description = "Evaluate corporate group booking request vs displaced transient revenue to recommend Accept/Reject/Counter-Offer."
+    args_schema = CalculateGroupDisplacementSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.los_displacement_service import los_displacement_service
+        from app.schemas.los_displacement import GroupDisplacementRequest
+        req = GroupDisplacementRequest(
+            group_name=kwargs["group_name"],
+            room_type_id=kwargs.get("room_type_id"),
+            rooms_requested=kwargs["rooms_requested"],
+            checkin_date=kwargs["checkin_date"],
+            checkout_date=kwargs["checkout_date"],
+            offered_rate=kwargs["offered_rate"],
+        )
+        res = los_displacement_service.evaluate_group_displacement(
+            db, hotel_id=kwargs["hotel_id"], req=req, user_id=1
+        )
+        return res.model_dump(mode="json")
+
+
+# --- Tool 24: get_los_restrictions ---
+class GetLOSRestrictionsSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    start_date: str = Field(..., description="Start stay date YYYY-MM-DD")
+    days: int = Field(default=14, ge=1, le=60, description="Days horizon")
+
+class GetLOSRestrictionsTool(BaseTool):
+    name = "get_los_restrictions"
+    description = "Retrieve dynamic Minimum Length of Stay (MLOS), CTA, and CTD restrictions for stay dates."
+    args_schema = GetLOSRestrictionsSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.los_displacement_service import los_displacement_service
+        rules = los_displacement_service.get_los_rules(
+            db, hotel_id=kwargs["hotel_id"], start_date=kwargs["start_date"], days=kwargs.get("days", 14)
+        )
+        return {
+            "hotel_id": kwargs["hotel_id"],
+            "start_date": kwargs["start_date"],
+            "los_rules": [r.model_dump(mode="json") for r in rules],
+        }
+
+
+# --- Tool 25: calculate_trevpar_analytics ---
+class CalculateTRePARAnalyticsSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    start_date: str = Field(..., description="Start date YYYY-MM-DD")
+    end_date: str = Field(..., description="End date YYYY-MM-DD")
+
+class CalculateTRePARAnalyticsTool(BaseTool):
+    name = "calculate_trevpar_analytics"
+    description = "Calculate Total Revenue Per Available Room (TRevPAR), RevPAR, NRevPAR, RevPOR, and F&B/Spa/Banquet non-room stream breakdown."
+    args_schema = CalculateTRePARAnalyticsSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.trevpar_service import trevpar_service
+        res = trevpar_service.calculate_trevpar_summary(
+            db, hotel_id=kwargs["hotel_id"], start_date=kwargs["start_date"], end_date=kwargs["end_date"]
+        )
+        return res.model_dump(mode="json")
+
+
+# --- Tool 26: generate_ancillary_upsell_packages ---
+class GenerateAncillaryUpsellPackagesSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+
+class GenerateAncillaryUpsellPackagesTool(BaseTool):
+    name = "generate_ancillary_upsell_packages"
+    description = "Generate AI dynamic non-room revenue upsell packages, bundle pricing, and TRevPAR yield expansion recommendations."
+    args_schema = GenerateAncillaryUpsellPackagesSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.trevpar_service import trevpar_service
+        pkgs = trevpar_service.generate_ancillary_packages(db, hotel_id=kwargs["hotel_id"])
+        return {
+            "hotel_id": kwargs["hotel_id"],
+            "ancillary_packages": [p.model_dump(mode="json") for p in pkgs],
+        }
+
+
+# --- Tool 27: dispatch_multi_channel_alert ---
+class DispatchMultiChannelAlertSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    alert_type: str = Field(..., description="COMPETITOR_UNDERCUT, PACE_SURGE, DISPLACEMENT_THRESHOLD, TREVPAR_BREACH, HIGH_DEMAND_EVENT")
+    title: str = Field(..., description="Alert headline/title")
+    message: str = Field(..., description="Detailed alert body message formatted with INR prices (₹)")
+    severity: str = Field("WARNING", description="CRITICAL, WARNING, INFO")
+    channels: Optional[List[str]] = Field(default=["EMAIL", "WHATSAPP", "SLACK", "IN_APP"], description="Channels to notify")
+    recipient: Optional[str] = Field(None, description="Optional target recipients")
+    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Context metadata dictionary")
+
+class DispatchMultiChannelAlertTool(BaseTool):
+    name = "dispatch_multi_channel_alert"
+    description = "Autonomously dispatch multi-channel revenue alerts (Email, WhatsApp, Slack, In-App) for competitor drops, pace surges, or displacement risks."
+    args_schema = DispatchMultiChannelAlertSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.alert_service import alert_service
+        from app.schemas.alerts import AlertDispatchPayload
+        payload = AlertDispatchPayload(
+            hotel_id=kwargs["hotel_id"],
+            alert_type=kwargs["alert_type"],
+            title=kwargs["title"],
+            message=kwargs["message"],
+            severity=kwargs.get("severity", "WARNING"),
+            channels=kwargs.get("channels", ["EMAIL", "WHATSAPP", "SLACK", "IN_APP"]),
+            recipient=kwargs.get("recipient"),
+            metadata_json=kwargs.get("metadata_json"),
+        )
+        res = alert_service.dispatch_alert(db, payload)
+        return {
+            "log_id": res.log_id,
+            "hotel_id": res.hotel_id,
+            "alert_type": res.alert_type,
+            "status": res.status,
+            "channel": res.channel,
+            "title": res.title,
+            "created_at": str(res.created_at),
+        }
+
+
+# --- Tool 28: get_active_alerts_and_rule_config ---
+class GetActiveAlertsSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    status_filter: Optional[str] = Field("ALL", description="DISPATCHED, ACKNOWLEDGED, ALL")
+    channel_filter: Optional[str] = Field("ALL", description="EMAIL, WHATSAPP, SLACK, IN_APP, ALL")
+
+class GetActiveAlertsTool(BaseTool):
+    name = "get_active_alerts_and_rule_config"
+    description = "Query active notification dispatch logs, breach severity, and channel configuration rules for a hotel."
+    args_schema = GetActiveAlertsSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.alert_service import alert_service
+        logs = alert_service.get_alert_logs(
+            db,
+            hotel_id=kwargs["hotel_id"],
+            status_filter=kwargs.get("status_filter", "ALL"),
+            channel_filter=kwargs.get("channel_filter", "ALL"),
+        )
+        rules = alert_service.get_alert_rules(db, hotel_id=kwargs["hotel_id"])
+        return {
+            "hotel_id": kwargs["hotel_id"],
+            "total_logs": len(logs),
+            "alerts": [
+                {
+                    "log_id": l.log_id,
+                    "alert_type": l.alert_type,
+                    "severity": l.severity,
+                    "title": l.title,
+                    "message": l.message,
+                    "channel": l.channel,
+                    "status": l.status,
+                    "recipient": l.recipient,
+                    "created_at": str(l.created_at),
+                }
+                for l in logs
+            ],
+            "active_rules_count": len([r for r in rules if r.is_enabled]),
+        }
+
+
+

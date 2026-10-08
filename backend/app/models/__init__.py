@@ -8,6 +8,9 @@ from app.models.hotel import Hotel, RoomType, RatePlan
 from app.models.inventory import RoomInventory, Reservation, DailyBookingSnapshot
 from app.models.rates import HistoricalRates, CompetitorHotels, CompetitorRates
 from app.models.events import Holidays, Events, Weather
+from app.models.los_displacement import LengthOfStayRules, GroupDisplacementLog
+from app.models.trevpar_ancillary import AncillaryRevenueLog, AncillaryPackageRecommendation
+from app.models.alerts import AlertNotificationRule, AlertNotificationLog
 from app.models.ai import (
     Forecasts,
     PriceRecommendations,
@@ -28,6 +31,8 @@ WeatherForecast = Weather
 Forecast = Forecasts
 PriceRecommendation = PriceRecommendations
 AuditLog = AuditLogs
+AlertRule = AlertNotificationRule
+AlertLog = AlertNotificationLog
 
 __all__ = [
     "Base",
@@ -60,4 +65,12 @@ __all__ = [
     "Feedback",
     "AuditLogs",
     "AuditLog",
+    "LengthOfStayRules",
+    "GroupDisplacementLog",
+    "AncillaryRevenueLog",
+    "AncillaryPackageRecommendation",
+    "AlertNotificationRule",
+    "AlertNotificationLog",
+    "AlertRule",
+    "AlertLog",
 ]

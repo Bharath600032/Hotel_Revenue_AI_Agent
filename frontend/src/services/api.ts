@@ -16,6 +16,13 @@ import {
   AuditLogItem,
   RAGSearchResult,
   WeatherForecastResponse,
+  GroupDisplacementRequest,
+  GroupDisplacementResponse,
+  LOSRuleResponse,
+  LOSRuleUpdate,
+  TRevPARSummaryResponse,
+  AncillaryPackageRecommendationResponse,
+  AncillaryRevenueEntry,
 } from '../types';
 
 const API_BASE_URL = '/api/v1';
@@ -372,6 +379,84 @@ export const apiService = {
     const res = await apiClient.get(`/hotels/${hotelId}/weather`, {
       params: { days },
     });
+    return res.data;
+  },
+
+  // Group Displacement & Length of Stay (LOS) AI
+  evaluateGroupDisplacement: async (data: GroupDisplacementRequest): Promise<GroupDisplacementResponse> => {
+    const res = await apiClient.post(`/hotels/${data.hotel_id}/group-displacement/evaluate`, data);
+    return res.data;
+  },
+
+  getGroupDisplacementLogs: async (hotelId: number, limit: number = 20): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/group-displacement/logs`, {
+      params: { limit },
+    });
+    return res.data;
+  },
+
+  getLOSRules: async (hotelId: number, startDate?: string, days: number = 14): Promise<LOSRuleResponse[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/los-rules`, {
+      params: { start_date: startDate, days },
+    });
+    return res.data;
+  },
+
+  updateLOSRule: async (hotelId: number, stayDate: string, data: LOSRuleUpdate): Promise<LOSRuleResponse> => {
+    const res = await apiClient.put(`/hotels/${hotelId}/los-rules/${stayDate}`, data);
+    return res.data;
+  },
+
+  // Total Revenue Management (TRevPAR) & Non-Room Revenue AI
+  getTRevPARSummary: async (hotelId: number, startDate?: string, endDate?: string): Promise<TRevPARSummaryResponse> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/trevpar/summary`, {
+      params: { start_date: startDate, end_date: endDate },
+    });
+    return res.data;
+  },
+
+  getAncillaryPackages: async (hotelId: number): Promise<AncillaryPackageRecommendationResponse[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/trevpar/packages`);
+    return res.data;
+  },
+
+  recordAncillaryEntry: async (hotelId: number, data: AncillaryRevenueEntry): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/trevpar/ancillary-entry`, data);
+    return res.data;
+  },
+
+  // Automated Multi-Channel Alerts & Notifications (Option 4)
+  getAlerts: async (hotelId: number, status?: string, channel?: string, severity?: string): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/alerts`, {
+      params: { status, channel, severity },
+    });
+    return res.data;
+  },
+
+  dispatchAlert: async (hotelId: number, data: any): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/alerts/dispatch`, data);
+    return res.data;
+  },
+
+  acknowledgeAlert: async (hotelId: number, logId: number, acknowledgedBy: string = 'Revenue Manager'): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/alerts/${logId}/acknowledge`, {
+      acknowledged_by: acknowledgedBy,
+    });
+    return res.data;
+  },
+
+  getAlertRules: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/alerts/rules`);
+    return res.data;
+  },
+
+  updateAlertRule: async (hotelId: number, ruleId: number, data: any): Promise<any> => {
+    const res = await apiClient.put(`/hotels/${hotelId}/alerts/rules/${ruleId}`, data);
+    return res.data;
+  },
+
+  testChannelDispatch: async (hotelId: number, data: any): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/alerts/test-dispatch`, data);
     return res.data;
   },
 };

@@ -21,6 +21,9 @@ from app.api.v1 import (
     audit,
     users,
     weather,
+    los_displacement,
+    trevpar_ancillary,
+    alerts,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -42,3 +45,6 @@ api_router.include_router(feedback.router)
 api_router.include_router(health.router)
 api_router.include_router(audit.router)
 api_router.include_router(users.router)
+api_router.include_router(los_displacement.router)
+api_router.include_router(trevpar_ancillary.router)
+api_router.include_router(alerts.router)

@@ -8,6 +8,8 @@ import {
   TrendingUp,
   LineChart,
   DollarSign,
+  Users,
+  Utensils,
   Users2,
   Calendar,
   Bot,
@@ -78,6 +80,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       title: 'REVENUE & PRICING',
       items: [
         { label: 'Revenue Analytics', icon: TrendingUp, path: '/revenue' },
+        { label: 'Group Displacement & LOS', icon: Users, path: '/group-displacement', badge: 'AI' },
+        { label: 'TRevPAR & Non-Room AI', icon: Utensils, path: '/trevpar', badge: 'AI' },
+        { label: 'Multi-Channel Alerts', icon: Bell, path: '/alerts', badge: 'AI' },
         { label: 'Demand Forecasting', icon: LineChart, path: '/forecasting' },
         { label: 'Pricing Engine', icon: DollarSign, path: '/pricing', badge: '5' },
         { label: 'Competitor Intelligence', icon: Users2, path: '/competitors' },
@@ -108,6 +113,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       case '/': return 'Overview';
       case '/hotels': return 'Hotels & Inventory';
       case '/revenue': return 'Revenue Analytics';
+      case '/group-displacement': return 'Group Displacement & LOS AI';
+      case '/trevpar': return 'TRevPAR & Non-Room Revenue AI';
+      case '/alerts': return 'Automated Multi-Channel Alerts';
       case '/forecasting': return 'Demand Forecasting';
       case '/pricing': return 'Pricing Engine & Approvals';
       case '/competitors': return 'Competitor Intelligence';

@@ -179,7 +179,80 @@ class MockLLMProvider(LLMProviderInterface):
                 "content": None,
             }
 
-        # Intent 8: Policy / SOP / General RAG Query
+        # Intent 8: Group Displacement Query
+        elif any(w in msg_lower for w in ["group", "displacement", "block", "corporate rate", "breakeven", "counter offer", "accept group"]):
+            return {
+                "thought": f"Evaluating group displacement and breakeven rate for stay starting {extracted_date}.",
+                "tool_calls": [
+                    {
+                        "tool_name": "calculate_group_displacement",
+                        "arguments": {
+                            "start_date": extracted_date,
+                            "end_date": (datetime.strptime(extracted_date, "%Y-%m-%d") + timedelta(days=3)).strftime("%Y-%m-%d"),
+                            "rooms_requested": 15,
+                            "offered_rate": 180.0,
+                        },
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 9: Length of Stay (LOS / MLOS / CTA / CTD) Restrictions Query
+        elif any(w in msg_lower for w in ["los", "mlos", "minimum stay", "length of stay", "closed to arrival", "cta", "ctd"]):
+            return {
+                "thought": "Fetching length of stay restrictions and dynamic MLOS recommendations.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_los_restrictions",
+                        "arguments": {"start_date": extracted_date, "end_date": extracted_date},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 10: TRevPAR & Non-Room Revenue Analytics Query
+        elif any(w in msg_lower for w in ["trevpar", "nrevpar", "revpor", "ancillary", "non-room", "f&b", "spa", "banquet", "parking", "laundry"]):
+            return {
+                "thought": "Calculating TRevPAR, NRevPAR, RevPOR, and non-room ancillary revenue streams.",
+                "tool_calls": [
+                    {
+                        "tool_name": "calculate_trevpar_analytics",
+                        "arguments": {
+                            "start_date": extracted_date,
+                            "end_date": extracted_date,
+                        },
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 11: Ancillary Upsell Packages & Bundle Yield Query
+        elif any(w in msg_lower for w in ["package", "bundle", "upsell", "addon", "add-on", "voucher"]):
+            return {
+                "thought": "Generating AI dynamic non-room revenue upsell packages and bundle yield optimization.",
+                "tool_calls": [
+                    {
+                        "tool_name": "generate_ancillary_upsell_packages",
+                        "arguments": {},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 12: Multi-Channel Alerts & Notification Query
+        elif any(w in msg_lower for w in ["alert", "notification", "whatsapp", "slack", "email alert", "undercut alert", "broadcast"]):
+            return {
+                "thought": "Checking active multi-channel alerts and notification logs.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_active_alerts_and_rule_config",
+                        "arguments": {"status_filter": "ALL", "channel_filter": "ALL"},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 13: Policy / SOP / General RAG Query
         return {
             "thought": "Searching RAG Knowledge Base and system records.",
             "tool_calls": [],

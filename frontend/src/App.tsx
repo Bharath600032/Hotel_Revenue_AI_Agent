@@ -17,6 +17,9 @@ import { RAG } from './pages/RAG';
 import { Audit } from './pages/Audit';
 import { Settings } from './pages/Settings';
 import { UsersManagement } from './pages/UsersManagement';
+import { GroupDisplacement } from './pages/GroupDisplacement';
+import { TRevPARAncillary } from './pages/TRevPARAncillary';
+import { AlertsNotifications } from './pages/AlertsNotifications';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -54,6 +57,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Revenue />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/group-displacement"
+              element={
+                <ProtectedRoute>
+                  <GroupDisplacement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trevpar"
+              element={
+                <ProtectedRoute>
+                  <TRevPARAncillary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alerts"
+              element={
+                <ProtectedRoute>
+                  <AlertsNotifications />
                 </ProtectedRoute>
               }
             />

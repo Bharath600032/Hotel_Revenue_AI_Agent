@@ -231,3 +231,118 @@ export interface WeatherForecastResponse {
   provider: string;
 }
 
+export interface DailyDisplacementBreakdown {
+  stay_date: string;
+  transient_rate: number;
+  transient_demand_pct: number;
+  available_capacity: number;
+  group_rooms: number;
+  displaced_transient_rooms: number;
+  transient_revenue_lost: number;
+}
+
+export interface GroupDisplacementRequest {
+  hotel_id: number;
+  start_date: string;
+  end_date: string;
+  rooms_requested: number;
+  offered_rate: number;
+  f_and_b_revenue?: number;
+  meeting_room_rental?: number;
+  other_ancillary_revenue?: number;
+}
+
+export interface GroupDisplacementResponse {
+  hotel_id: number;
+  start_date: string;
+  end_date: string;
+  total_nights: number;
+  total_room_nights_requested: number;
+  offered_group_rate: number;
+  gross_group_room_revenue: number;
+  ancillary_revenue: number;
+  total_gross_group_revenue: number;
+  total_transient_revenue_displaced: number;
+  net_revenue_impact: number;
+  breakeven_group_rate: number;
+  recommended_counter_offer_rate: number;
+  recommendation: 'ACCEPT' | 'REJECT' | 'COUNTER_OFFER';
+  decision_rationale: string;
+  daily_breakdown: DailyDisplacementBreakdown[];
+}
+
+export interface LOSRuleResponse {
+  rule_id: number;
+  hotel_id: number;
+  stay_date: string;
+  room_type_id?: number;
+  min_length_of_stay: number;
+  max_length_of_stay?: number;
+  closed_to_arrival: boolean;
+  closed_to_departure: boolean;
+  is_system_recommended: boolean;
+  ai_confidence?: number;
+  recommendation_reason?: string;
+}
+
+export interface LOSRuleUpdate {
+  min_length_of_stay?: number;
+  max_length_of_stay?: number;
+  closed_to_arrival?: boolean;
+  closed_to_departure?: boolean;
+}
+
+export interface AncillaryCategoryBreakdown {
+  category: string;
+  revenue_amount: number;
+  percentage_of_total_ancillary: number;
+  revpor: number;
+  cover_count: number;
+}
+
+export interface TRevPARSummaryResponse {
+  hotel_id: number;
+  start_date: string;
+  end_date: string;
+  total_sellable_rooms: number;
+  total_occupied_rooms: number;
+  occupancy_pct: number;
+  room_revenue: number;
+  total_ancillary_revenue: number;
+  total_gross_revenue: number;
+  adr: number;
+  revpar: number;
+  trevpar: number;
+  nrevpar: number;
+  revpor: number;
+  ancillary_revpor: number;
+  distribution_commission_costs: number;
+  categories_breakdown: AncillaryCategoryBreakdown[];
+}
+
+export interface AncillaryPackageRecommendationResponse {
+  package_id: number;
+  hotel_id: number;
+  package_name: string;
+  category: string;
+  description: string;
+  standalone_price: number;
+  recommended_bundle_price: number;
+  discount_pct: number;
+  projected_conversion_uplift_pct: number;
+  expected_trevpar_gain_per_room: number;
+  strategy_reasoning: string;
+}
+
+export interface AncillaryRevenueEntry {
+  entry_date: string;
+  category: 'FB' | 'SPA' | 'BANQUET' | 'PARKING' | 'LAUNDRY' | 'OTHER';
+  sub_category?: string;
+  revenue_amount: number;
+  cover_count?: number;
+  cost_of_sales?: number;
+  notes?: string;
+}
+
+
+

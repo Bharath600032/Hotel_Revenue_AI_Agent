@@ -30,6 +30,12 @@ from app.tools.revenue_tools import (
     ExportRecommendationsTool,
     RequestHumanApprovalTool,
     RecordFeedbackTool,
+    CalculateGroupDisplacementTool,
+    GetLOSRestrictionsTool,
+    CalculateTRePARAnalyticsTool,
+    GenerateAncillaryUpsellPackagesTool,
+    DispatchMultiChannelAlertTool,
+    GetActiveAlertsTool,
 )
 from app.models.ai import AgentToolCalls
 from app.core.logging import get_logger
@@ -159,6 +165,12 @@ class ToolRegistry:
             ExportRecommendationsTool(),
             RequestHumanApprovalTool(),
             RecordFeedbackTool(),
+            CalculateGroupDisplacementTool(),
+            GetLOSRestrictionsTool(),
+            CalculateTRePARAnalyticsTool(),
+            GenerateAncillaryUpsellPackagesTool(),
+            DispatchMultiChannelAlertTool(),
+            GetActiveAlertsTool(),
         ]
         for t in tools:
             self.register(t)
