@@ -21,6 +21,8 @@ import {
   Edit3,
   Layers,
   Sparkles,
+  Sliders,
+  History,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -48,7 +50,7 @@ export const GroupDisplacement: React.FC = () => {
   const { selectedHotel } = useHotel();
   const hotelId = selectedHotel?.hotel_id || 1;
 
-  const [activeTab, setActiveTab] = useState<'calculator' | 'los_rules' | 'history'>('calculator');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'los_rules' | 'audit_logs'>('calculator');
 
   // Group Calculator Form state
   const [startDate, setStartDate] = useState(getFutureDateString(3));
@@ -624,7 +626,7 @@ export const GroupDisplacement: React.FC = () => {
       )}
 
       {/* TAB 3: AUDIT HISTORY LOG */}
-      {activeTab === 'history' && (
+      {activeTab === 'audit_logs' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>

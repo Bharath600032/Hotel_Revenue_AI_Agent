@@ -13,7 +13,11 @@ import {
   Users2,
   Calendar,
   Bot,
+  Cpu,
+  Key,
+  Code2,
   FileSpreadsheet,
+  FileText,
   BookOpen,
   History,
   Settings,
@@ -93,12 +97,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       title: 'INTELLIGENCE & AI',
       items: [
         { label: 'AI Revenue Assistant', icon: Bot, path: '/assistant', badge: 'AI' },
+        { label: 'Multi-Agent Swarm', icon: Cpu, path: '/agent-swarm', badge: 'AI' },
         { label: 'RAG Knowledge Base', icon: BookOpen, path: '/rag' },
       ],
     },
     {
       title: 'SYSTEM & LOGS',
       items: [
+        { label: 'Executive PDF & BI', icon: FileText, path: '/executive-reports', badge: 'AI' },
+        { label: 'Developer & Webhooks', icon: Key, path: '/developer-portal', badge: 'DEV' },
         { label: 'User & Role Access', icon: UserIcon, path: '/users', badge: 'ADMIN' },
         { label: 'Reports & Exports', icon: FileSpreadsheet, path: '/reports' },
         { label: 'Audit Compliance', icon: History, path: '/audit' },
@@ -116,6 +123,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       case '/group-displacement': return 'Group Displacement & LOS AI';
       case '/trevpar': return 'TRevPAR & Non-Room Revenue AI';
       case '/alerts': return 'Automated Multi-Channel Alerts';
+      case '/executive-reports': return 'Executive PDF Reporting & BI Exports';
+      case '/agent-swarm': return 'Multi-Agent Collaborative Swarm';
+      case '/developer-portal': return 'API Key Management & Webhook Developer Portal';
       case '/forecasting': return 'Demand Forecasting';
       case '/pricing': return 'Pricing Engine & Approvals';
       case '/competitors': return 'Competitor Intelligence';

@@ -94,12 +94,14 @@ def init_db(db: Session) -> None:
         except Exception as seed_err:
             logger.warning("demo_hotels_seeding_failed", error=str(seed_err))
 
-    # Seed live metric data and competitor rates for all hotel properties
+    # Seed live metric data, competitor rates, and multi-channel alert rules for all hotel properties
     from app.agents.hotel_agent_factory import hotel_agent_factory
+    from app.services.alert_service import alert_service
     all_hotels = db.query(Hotel).all()
     for h in all_hotels:
         try:
             hotel_agent_factory.ensure_hotel_live_data(db, h.hotel_id)
+            alert_service.seed_default_rules_and_demo_alerts(db, h.hotel_id)
         except Exception as err:
             logger.warning("hotel_live_data_seeding_failed", hotel_id=h.hotel_id, error=str(err))
 

@@ -11,6 +11,9 @@ from app.models.events import Holidays, Events, Weather
 from app.models.los_displacement import LengthOfStayRules, GroupDisplacementLog
 from app.models.trevpar_ancillary import AncillaryRevenueLog, AncillaryPackageRecommendation
 from app.models.alerts import AlertNotificationRule, AlertNotificationLog
+from app.models.reports_bi import ExecutiveReportSchedule, ReportExportLog
+from app.models.agent_swarm import AgentSwarmMember, SwarmSessionLog
+from app.models.developer_api import DeveloperAPIKey, WebhookSubscription, WebhookEventLog
 from app.models.ai import (
     Forecasts,
     PriceRecommendations,
@@ -33,6 +36,9 @@ PriceRecommendation = PriceRecommendations
 AuditLog = AuditLogs
 AlertRule = AlertNotificationRule
 AlertLog = AlertNotificationLog
+ExecutiveSchedule = ExecutiveReportSchedule
+SwarmMember = AgentSwarmMember
+APIKey = DeveloperAPIKey
 
 __all__ = [
     "Base",
@@ -73,4 +79,14 @@ __all__ = [
     "AlertNotificationLog",
     "AlertRule",
     "AlertLog",
+    "ExecutiveReportSchedule",
+    "ReportExportLog",
+    "ExecutiveSchedule",
+    "AgentSwarmMember",
+    "SwarmSessionLog",
+    "SwarmMember",
+    "DeveloperAPIKey",
+    "APIKey",
+    "WebhookSubscription",
+    "WebhookEventLog",
 ]

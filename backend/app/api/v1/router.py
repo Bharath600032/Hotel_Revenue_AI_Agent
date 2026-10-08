@@ -24,6 +24,9 @@ from app.api.v1 import (
     los_displacement,
     trevpar_ancillary,
     alerts,
+    pdf_bi_reports,
+    agent_swarm,
+    developer_api,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -48,3 +51,7 @@ api_router.include_router(users.router)
 api_router.include_router(los_displacement.router)
 api_router.include_router(trevpar_ancillary.router)
 api_router.include_router(alerts.router)
+api_router.include_router(pdf_bi_reports.router)
+api_router.include_router(agent_swarm.router)
+api_router.include_router(developer_api.router)
+

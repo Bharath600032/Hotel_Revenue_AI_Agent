@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useHotel } from '../context/HotelContext';
 
 interface AlertLog {
   log_id: number;
@@ -61,7 +62,8 @@ interface AlertRule {
 }
 
 export const AlertsNotifications: React.FC = () => {
-  const [hotelId] = useState<number>(1);
+  const { selectedHotel } = useHotel();
+  const hotelId = selectedHotel?.hotel_id || 1;
   const [activeTab, setActiveTab] = useState<'feed' | 'rules' | 'simulator'>('feed');
 
   // Data states
@@ -89,6 +91,25 @@ export const AlertsNotifications: React.FC = () => {
     fetchAlertsData();
   }, [hotelId, statusFilter, channelFilter, severityFilter]);
 
+  useEffect(() => {
+    if (!simResult) {
+      runInitialSimulator();
+    }
+  }, [hotelId]);
+
+  const runInitialSimulator = async () => {
+    try {
+      const res = await apiService.testChannelDispatch(hotelId, {
+        channel: 'SLACK',
+        target_destination: 'https://hooks.slack.com/services/T00/B00/XXXX',
+        sample_type: 'COMPETITOR_UNDERCUT',
+      });
+      setSimResult(res);
+    } catch (err) {
+      console.error('Failed to run initial simulator dispatch:', err);
+    }
+  };
+
   const fetchAlertsData = async () => {
     try {
       setLoading(true);
@@ -96,10 +117,12 @@ export const AlertsNotifications: React.FC = () => {
         apiService.getAlerts(hotelId, statusFilter, channelFilter, severityFilter),
         apiService.getAlertRules(hotelId),
       ]);
-      setAlerts(alertLogs);
-      setRules(alertRules);
+      setAlerts(alertLogs || []);
+      setRules(alertRules || []);
     } catch (err) {
       console.error('Failed to fetch alerts data:', err);
+      setAlerts([]);
+      setRules([]);
     } finally {
       setLoading(false);
     }

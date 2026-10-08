@@ -845,4 +845,158 @@ class GetActiveAlertsTool(BaseTool):
         }
 
 
+# --- Tool 29: generate_executive_pdf_report ---
+class GenerateExecutivePDFReportSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    report_type: Optional[str] = Field("DAILY_REVENUE", description="DAILY_REVENUE, WEEKLY_TREVPAR, MONTHLY_DISPLACEMENT_AUDIT")
+    title: Optional[str] = Field(None, description="Custom report title")
+
+class GenerateExecutivePDFReportTool(BaseTool):
+    name = "generate_executive_pdf_report"
+    description = "Generate an executive PDF revenue performance digest with INR pricing (₹), RevPAR/TRevPAR metrics, and AI strategic recommendations."
+    args_schema = GenerateExecutivePDFReportSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.pdf_bi_report_service import pdf_bi_report_service
+        from app.schemas.reports_bi import ReportGenerateRequest
+        req = ReportGenerateRequest(
+            hotel_id=kwargs["hotel_id"],
+            report_type=kwargs.get("report_type", "DAILY_REVENUE"),
+            title=kwargs.get("title"),
+        )
+        log = pdf_bi_report_service.generate_executive_pdf(db, req)
+        return {
+            "export_id": log.export_id,
+            "hotel_id": log.hotel_id,
+            "report_title": log.report_title,
+            "download_url": log.download_url,
+            "file_size_kb": log.file_size_kb,
+            "generated_at": str(log.generated_at),
+        }
+
+
+# --- Tool 30: export_bi_analytics_dataset ---
+class ExportBIAnalyticsDatasetSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    days: Optional[int] = Field(30, description="Historical days window")
+
+class ExportBIAnalyticsDatasetTool(BaseTool):
+    name = "export_bi_analytics_dataset"
+    description = "Export a PowerBI & Tableau compatible JSON/CSV dataset schema containing daily ADR (₹), RevPAR, TRevPAR, Occupancy, and Competitor Index."
+    args_schema = ExportBIAnalyticsDatasetSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.pdf_bi_report_service import pdf_bi_report_service
+        res = pdf_bi_report_service.export_bi_dataset(db, hotel_id=kwargs["hotel_id"], days=kwargs.get("days", 30))
+        return res.model_dump(mode="json")
+
+
+# --- Tool 31: run_multi_agent_swarm_consensus ---
+class RunMultiAgentSwarmConsensusSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    topic: Optional[str] = Field("DYNAMIC_PRICING_AND_RESTRICTION_CONSENSUS", description="Target evaluation topic")
+
+class RunMultiAgentSwarmConsensusTool(BaseTool):
+    name = "run_multi_agent_swarm_consensus"
+    description = "Orchestrate a live multi-agent collaborative swarm evaluation across Pricing, Demand, Compete, Displacement, and TRevPAR sub-agents."
+    args_schema = RunMultiAgentSwarmConsensusSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.agent_swarm_service import agent_swarm_service
+        from app.schemas.agent_swarm import SwarmEvaluateRequest
+        req = SwarmEvaluateRequest(
+            hotel_id=kwargs["hotel_id"],
+            topic=kwargs.get("topic", "DYNAMIC_PRICING_AND_RESTRICTION_CONSENSUS"),
+        )
+        res = agent_swarm_service.evaluate_swarm_consensus(db, req)
+        return res.model_dump(mode="json")
+
+
+# --- Tool 32: get_agent_swarm_status ---
+class GetAgentSwarmStatusSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+
+class GetAgentSwarmStatusTool(BaseTool):
+    name = "get_agent_swarm_status"
+    description = "Query active status, accuracy ratings, and proposal metrics for all 5 sub-agents in the swarm."
+    args_schema = GetAgentSwarmStatusSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.agent_swarm_service import agent_swarm_service
+        members = agent_swarm_service.get_swarm_members(db, hotel_id=kwargs["hotel_id"])
+        sessions = agent_swarm_service.get_swarm_sessions(db, hotel_id=kwargs["hotel_id"])
+        return {
+            "hotel_id": kwargs["hotel_id"],
+            "active_agents_count": len([m for m in members if m.status == "ACTIVE"]),
+            "agents": [m.model_dump(mode="json") for m in members],
+            "total_sessions_evaluated": len(sessions),
+        }
+
+
+# --- Tool 33: generate_developer_api_key ---
+class GenerateDeveloperAPIKeySchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    name: str = Field(..., description="Name or purpose of the API Key (e.g. PMS Sync Key)")
+    scopes: Optional[List[str]] = Field(default=["pricing:read", "pricing:write", "reports:read"], description="Allowed scopes")
+    expires_in_days: Optional[int] = Field(90, description="Expiration in days")
+
+class GenerateDeveloperAPIKeyTool(BaseTool):
+    name = "generate_developer_api_key"
+    description = "Generate a new developer API key with custom scopes and rate limits for third-party PMS or BI integration."
+    args_schema = GenerateDeveloperAPIKeySchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.developer_api_service import DeveloperAPIService
+        key_obj, raw_key = DeveloperAPIService.create_api_key(
+            hotel_id=kwargs["hotel_id"],
+            name=kwargs["name"],
+            scopes=kwargs.get("scopes", ["pricing:read", "pricing:write", "reports:read"]),
+            expires_in_days=kwargs.get("expires_in_days", 90),
+            db=db,
+        )
+        return {
+            "id": key_obj.id,
+            "hotel_id": key_obj.hotel_id,
+            "name": key_obj.name,
+            "api_key_raw": raw_key,
+            "api_key_prefix": key_obj.api_key_prefix,
+            "scopes": key_obj.scopes,
+            "status": key_obj.status,
+            "created_at": str(key_obj.created_at),
+        }
+
+
+# --- Tool 34: register_webhook_subscription ---
+class RegisterWebhookSubscriptionSchema(BaseModel):
+    hotel_id: int = Field(..., description="Target Hotel ID")
+    endpoint_url: str = Field(..., description="HTTPS URL of the receiving webhook listener")
+    events: List[str] = Field(..., description="List of events to subscribe to (e.g. ['price.updated', 'anomalies.detected'])")
+    description: Optional[str] = Field(None, description="Subscription label/description")
+
+class RegisterWebhookSubscriptionTool(BaseTool):
+    name = "register_webhook_subscription"
+    description = "Register a new webhook listener URL for real-time push events on price updates, anomaly alerts, or swarm consensus."
+    args_schema = RegisterWebhookSubscriptionSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.services.developer_api_service import DeveloperAPIService
+        sub = DeveloperAPIService.create_webhook(
+            hotel_id=kwargs["hotel_id"],
+            endpoint_url=kwargs["endpoint_url"],
+            events=kwargs["events"],
+            description=kwargs.get("description"),
+            db=db,
+        )
+        return {
+            "id": sub.id,
+            "hotel_id": sub.hotel_id,
+            "endpoint_url": sub.endpoint_url,
+            "secret_key": sub.secret_key,
+            "events": sub.events,
+            "status": sub.status,
+            "created_at": str(sub.created_at),
+        }
+
+
+
 

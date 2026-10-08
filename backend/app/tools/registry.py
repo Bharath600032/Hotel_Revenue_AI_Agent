@@ -36,6 +36,12 @@ from app.tools.revenue_tools import (
     GenerateAncillaryUpsellPackagesTool,
     DispatchMultiChannelAlertTool,
     GetActiveAlertsTool,
+    GenerateExecutivePDFReportTool,
+    ExportBIAnalyticsDatasetTool,
+    RunMultiAgentSwarmConsensusTool,
+    GetAgentSwarmStatusTool,
+    GenerateDeveloperAPIKeyTool,
+    RegisterWebhookSubscriptionTool,
 )
 from app.models.ai import AgentToolCalls
 from app.core.logging import get_logger
@@ -60,7 +66,7 @@ def make_json_serializable(obj: Any) -> Any:
 
 
 class ToolRegistry:
-    """Central registry holding all 22 specialized agent tools."""
+    """Central registry holding all 34 specialized agent tools."""
 
     def __init__(self):
         self._tools: Dict[str, BaseTool] = {}
@@ -171,9 +177,16 @@ class ToolRegistry:
             GenerateAncillaryUpsellPackagesTool(),
             DispatchMultiChannelAlertTool(),
             GetActiveAlertsTool(),
+            GenerateExecutivePDFReportTool(),
+            ExportBIAnalyticsDatasetTool(),
+            RunMultiAgentSwarmConsensusTool(),
+            GetAgentSwarmStatusTool(),
+            GenerateDeveloperAPIKeyTool(),
+            RegisterWebhookSubscriptionTool(),
         ]
         for t in tools:
             self.register(t)
 
 
 tool_registry = ToolRegistry()
+

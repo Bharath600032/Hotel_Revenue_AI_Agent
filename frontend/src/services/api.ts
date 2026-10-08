@@ -459,6 +459,111 @@ export const apiService = {
     const res = await apiClient.post(`/hotels/${hotelId}/alerts/test-dispatch`, data);
     return res.data;
   },
+
+  // Executive PDF Reporting & Automated BI Exports (Option 5)
+  getReportSchedules: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/executive-reports/schedules`);
+    return res.data;
+  },
+
+  createReportSchedule: async (hotelId: number, data: any): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/executive-reports/schedules`, data);
+    return res.data;
+  },
+
+  getReportExportHistory: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/executive-reports/history`);
+    return res.data;
+  },
+
+  generateExecutivePDF: async (hotelId: number, data: any): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/executive-reports/generate-pdf`, data);
+    return res.data;
+  },
+
+  getBIDataset: async (hotelId: number, days: number = 30): Promise<any> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/executive-reports/bi-dataset`, {
+      params: { days },
+    });
+    return res.data;
+  },
+
+  // Multi-Agent Collaborative Swarm Architecture (Option 6)
+  getSwarmMembers: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/swarm/members`);
+    return res.data;
+  },
+
+  getSwarmSessions: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/hotels/${hotelId}/swarm/sessions`);
+    return res.data;
+  },
+
+  evaluateSwarmConsensus: async (hotelId: number, data: any): Promise<any> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/swarm/evaluate`, data);
+    return res.data;
+  },
+
+  // API Key Management & Webhook Developer Portal (Option 7)
+  getAPIKeys: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/developer/api-keys`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  createAPIKey: async (hotelId: number, data: { name: string; scopes?: string[]; expires_in_days?: number }): Promise<any> => {
+    const res = await apiClient.post(`/developer/api-keys`, data, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  revokeAPIKey: async (hotelId: number, keyId: number): Promise<any> => {
+    const res = await apiClient.delete(`/developer/api-keys/${keyId}`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  getWebhooks: async (hotelId: number): Promise<any[]> => {
+    const res = await apiClient.get(`/developer/webhooks`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  createWebhook: async (hotelId: number, data: { endpoint_url: string; events: string[]; description?: string }): Promise<any> => {
+    const res = await apiClient.post(`/developer/webhooks`, data, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  deleteWebhook: async (hotelId: number, webhookId: number): Promise<any> => {
+    const res = await apiClient.delete(`/developer/webhooks/${webhookId}`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  testDispatchWebhook: async (hotelId: number, subscriptionId: number, eventType?: string): Promise<any> => {
+    const res = await apiClient.post(`/developer/webhooks/test-dispatch`, {
+      subscription_id: subscriptionId,
+      event_type: eventType,
+    }, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  getWebhookLogs: async (hotelId: number, limit: number = 20): Promise<any[]> => {
+    const res = await apiClient.get(`/developer/webhooks/logs`, {
+      params: { hotel_id: hotelId, limit },
+    });
+    return res.data;
+  },
 };
+
 
 

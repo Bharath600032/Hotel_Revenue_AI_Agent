@@ -200,6 +200,64 @@ class LOSDisplacementService:
         )
 
     def get_group_displacement_logs(self, db: Session, hotel_id: int, limit: int = 50) -> List[GroupDisplacementResponse]:
+        count = db.query(GroupDisplacementLog).filter(GroupDisplacementLog.hotel_id == hotel_id).count()
+        if count == 0:
+            demo_logs = [
+                GroupDisplacementLog(
+                    hotel_id=hotel_id,
+                    group_name="TechCorp Annual Summit",
+                    rooms_requested=45,
+                    checkin_date=date(2026, 10, 20),
+                    checkout_date=date(2026, 10, 23),
+                    nights=3,
+                    offered_rate=5800.0,
+                    proposed_group_revenue=783000.0,
+                    transient_revenue_displaced=857500.0,
+                    net_displacement_impact=-74500.0,
+                    breakeven_group_rate=7420.0,
+                    counter_offer_rate=7500.0,
+                    decision="COUNTER_OFFER",
+                    rationale="Displacement loss of ₹74,500 occurs due to 88% high demand occupancy. Counter-offer floor rate calculated at ₹7,420/night.",
+                    created_at=datetime.utcnow() - timedelta(hours=2),
+                ),
+                GroupDisplacementLog(
+                    hotel_id=hotel_id,
+                    group_name="Pharma Global Conference",
+                    rooms_requested=25,
+                    checkin_date=date(2026, 11, 5),
+                    checkout_date=date(2026, 11, 8),
+                    nights=3,
+                    offered_rate=8200.0,
+                    proposed_group_revenue=615000.0,
+                    transient_revenue_displaced=310000.0,
+                    net_displacement_impact=305000.0,
+                    breakeven_group_rate=5200.0,
+                    counter_offer_rate=8200.0,
+                    decision="ACCEPT",
+                    rationale="Positive net revenue impact of +₹305,000. Ancillary F&B revenue covers minor transient displacement.",
+                    created_at=datetime.utcnow() - timedelta(hours=26),
+                ),
+                GroupDisplacementLog(
+                    hotel_id=hotel_id,
+                    group_name="Apex Financial Retreat",
+                    rooms_requested=60,
+                    checkin_date=date(2026, 12, 10),
+                    checkout_date=date(2026, 12, 12),
+                    nights=2,
+                    offered_rate=4500.0,
+                    proposed_group_revenue=540000.0,
+                    transient_revenue_displaced=920000.0,
+                    net_displacement_impact=-380000.0,
+                    breakeven_group_rate=8100.0,
+                    counter_offer_rate=8500.0,
+                    decision="REJECT",
+                    rationale="Offered rate of ₹4,500/night is far below breakeven floor of ₹8,100/night during peak weekend demand.",
+                    created_at=datetime.utcnow() - timedelta(hours=50),
+                ),
+            ]
+            db.add_all(demo_logs)
+            db.commit()
+
         logs = (
             db.query(GroupDisplacementLog)
             .filter(GroupDisplacementLog.hotel_id == hotel_id)

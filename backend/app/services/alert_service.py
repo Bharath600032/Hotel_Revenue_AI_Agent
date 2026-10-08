@@ -104,7 +104,7 @@ class AlertService:
         if log_count == 0:
             logger.info("seeding_demo_alert_logs", hotel_id=hotel_id)
             hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-            hotel_name = hotel.name if hotel else f"Property #{hotel_id}"
+            hotel_name = hotel.hotel_name if hotel else f"Property #{hotel_id}"
 
             rules = db.query(AlertNotificationRule).filter(AlertNotificationRule.hotel_id == hotel_id).all()
             rule_map = {r.alert_type: r.rule_id for r in rules}
@@ -325,7 +325,7 @@ class AlertService:
     def test_channel_dispatch(self, db: Session, hotel_id: int, request: ChannelTestRequest) -> ChannelTestResponse:
         """Simulate real-time multi-channel delivery payload generation."""
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-        hotel_name = hotel.name if hotel else f"Property #{hotel_id}"
+        hotel_name = hotel.hotel_name if hotel else f"Property #{hotel_id}"
 
         channel = request.channel.upper()
         sample_type = request.sample_type or "COMPETITOR_UNDERCUT"

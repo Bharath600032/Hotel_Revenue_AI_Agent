@@ -20,6 +20,9 @@ import { UsersManagement } from './pages/UsersManagement';
 import { GroupDisplacement } from './pages/GroupDisplacement';
 import { TRevPARAncillary } from './pages/TRevPARAncillary';
 import { AlertsNotifications } from './pages/AlertsNotifications';
+import { ExecutiveReportsBI } from './pages/ExecutiveReportsBI';
+import { AgentSwarmArchitecture } from './pages/AgentSwarmArchitecture';
+import { DeveloperPortal } from './pages/DeveloperPortal';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -81,6 +84,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <AlertsNotifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/executive-reports"
+              element={
+                <ProtectedRoute>
+                  <ExecutiveReportsBI />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agent-swarm"
+              element={
+                <ProtectedRoute>
+                  <AgentSwarmArchitecture />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/developer-portal"
+              element={
+                <ProtectedRoute>
+                  <DeveloperPortal />
                 </ProtectedRoute>
               }
             />

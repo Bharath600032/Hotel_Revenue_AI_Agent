@@ -1,7 +1,7 @@
 """
 API routes for Option 4: Automated Multi-Channel Alerts & Notifications.
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,8 @@ from app.schemas.alerts import (
     ChannelTestResponse,
 )
 from app.services.alert_service import alert_service
-from app.api.v1.hotels import verify_hotel_access
+from app.api.deps import verify_hotel_access, get_current_user
+from app.models.user import User
 from app.core.logging import get_logger
 
 logger = get_logger("app.api.v1.alerts")
@@ -31,9 +32,10 @@ def get_alerts_log(
     channel_filter: Optional[str] = Query("ALL", alias="channel"),
     severity_filter: Optional[str] = Query("ALL", alias="severity"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Retrieve multi-channel alert dispatch logs with optional filters."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     return alert_service.get_alert_logs(
         db,
         hotel_id,
@@ -48,9 +50,10 @@ def dispatch_alert_notification(
     hotel_id: int,
     payload: AlertDispatchPayload,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Manually or agent-trigger dispatch of a multi-channel alert."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     if payload.hotel_id != hotel_id:
         payload.hotel_id = hotel_id
     return alert_service.dispatch_alert(db, payload)
@@ -62,9 +65,10 @@ def acknowledge_alert_notification(
     log_id: int,
     body: AlertAcknowledgeRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Mark an alert log notification as ACKNOWLEDGED."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     try:
         return alert_service.acknowledge_alert(db, hotel_id, log_id, body.acknowledged_by)
     except ValueError as exc:
@@ -75,9 +79,10 @@ def acknowledge_alert_notification(
 def get_alert_rules(
     hotel_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Retrieve multi-channel alert notification rules configuration matrix."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     return alert_service.get_alert_rules(db, hotel_id)
 
 
@@ -87,9 +92,10 @@ def update_alert_rule(
     rule_id: int,
     payload: AlertRuleUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update threshold or channel toggles for an alert rule."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     try:
         return alert_service.update_alert_rule(db, hotel_id, rule_id, payload)
     except ValueError as exc:
@@ -101,7 +107,8 @@ def test_channel_dispatch(
     hotel_id: int,
     request: ChannelTestRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Simulate real-time multi-channel delivery test dispatch (Email, WhatsApp, Slack, In-App)."""
-    verify_hotel_access(hotel_id, db)
+    verify_hotel_access(hotel_id, current_user, db)
     return alert_service.test_channel_dispatch(db, hotel_id, request)
