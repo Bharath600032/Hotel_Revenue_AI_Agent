@@ -39,6 +39,22 @@ class OTAChannelResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class OTAChannelCreateRequest(BaseModel):
+    channel_name: str = Field(..., example="TripAdvisor")
+    channel_code: str = Field(..., example="TA")
+    commission_pct: float = Field(..., ge=0.0, le=50.0, example=15.0)
+    mapped_room_count: Optional[int] = Field(default=8, ge=1)
+    last_pushed_rate_inr: Optional[float] = Field(default=9500.0, gt=0.0)
+
+class OTAChannelUpdateRequest(BaseModel):
+    channel_name: Optional[str] = Field(None, example="Booking.com Premier")
+    commission_pct: Optional[float] = Field(None, ge=0.0, le=50.0, example=17.5)
+    connection_status: Optional[str] = Field(None, example="ACTIVE")
+    rate_parity_status: Optional[str] = Field(None, example="PARITY_OK")
+    mapped_room_count: Optional[int] = Field(None, ge=1)
+    last_pushed_rate_inr: Optional[float] = Field(None, gt=0.0)
+
+
 class RatePushRequest(BaseModel):
     target_channels: Optional[List[str]] = Field(default=["OPERA_CLOUD", "BOOKING_COM", "MAKEMYTRIP", "AGODA", "GOIBIBO", "EXPEDIA"])
     room_type: str = Field(..., example="Deluxe Ocean Suite")

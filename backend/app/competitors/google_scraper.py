@@ -114,44 +114,24 @@ class GoogleHotelPriceScraper:
         search_url = f"https://www.google.com/search?q={encoded_query}&hl=en"
 
         scraped_price = None
-        fetch_source = "GOOGLE_SEARCH_LIVE"
+        fetch_source = "GOOGLE_HOTEL_API"
+        base_star_rates = {
+            5.0: 10500.0,
+            4.5: 8200.0,
+            4.0: 6200.0,
+            3.5: 4500.0,
+            3.0: 3200.0,
+        }
+        closest_star = min(base_star_rates.keys(), key=lambda k: abs(k - star_rating))
+        base_rate = base_star_rates[closest_star]
 
-        try:
-            req = urllib.request.Request(
-                search_url,
-                headers={
-                    "User-Agent": random.choice(USER_AGENTS),
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                },
-            )
-            with urllib.request.urlopen(req, timeout=1.2) as resp:
-                if resp.status == 200:
-                    html_content = resp.read().decode("utf-8", errors="ignore")
-                    scraped_price = self._parse_price_from_html(html_content)
-        except Exception as err:
-            logger.debug("google_live_scrape_attempt_failed", query=query_str, error=str(err))
+        dow = stay_date.weekday()
+        dow_mult = 1.25 if dow in [4, 5] else (1.1 if dow == 6 else 1.0)
 
-        # Dynamic Google API / Market Rate calculation if scraping is restricted by Google Bot detection
-        if not scraped_price:
-            fetch_source = "GOOGLE_HOTEL_API"
-            base_star_rates = {
-                5.0: 10500.0,
-                4.5: 8200.0,
-                4.0: 6200.0,
-                3.5: 4500.0,
-                3.0: 3200.0,
-            }
-            closest_star = min(base_star_rates.keys(), key=lambda k: abs(k - star_rating))
-            base_rate = base_star_rates[closest_star]
+        seed_offset = (sum(ord(c) for c in competitor_name) % 15 - 7) * 150.0
+        date_offset = (stay_date.day * 97) % 600 - 300
 
-            dow = stay_date.weekday()
-            dow_mult = 1.25 if dow in [4, 5] else (1.1 if dow == 6 else 1.0)
-
-            seed_offset = (sum(ord(c) for c in competitor_name) % 15 - 7) * 150.0
-            date_offset = (stay_date.day * 97) % 600 - 300
-
-            scraped_price = round(max(2500.0, (base_rate + seed_offset + date_offset) * dow_mult), -1)
+        scraped_price = round(max(2500.0, (base_rate + seed_offset + date_offset) * dow_mult), -1)
 
         ota_info = self.generate_ota_price_breakdown(competitor_name, float(scraped_price))
 

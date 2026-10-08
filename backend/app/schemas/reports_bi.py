@@ -16,6 +16,16 @@ class ExecutiveScheduleCreate(BaseModel):
     is_active: bool = True
 
 
+class ExecutiveScheduleUpdate(BaseModel):
+    schedule_name: Optional[str] = None
+    report_type: Optional[str] = None
+    frequency: Optional[str] = None
+    file_format: Optional[str] = None
+    recipients: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+
 class ExecutiveScheduleResponse(BaseModel):
     schedule_id: int
     hotel_id: int

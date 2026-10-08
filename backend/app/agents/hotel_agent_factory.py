@@ -111,6 +111,15 @@ class HotelAgentFactory:
             db.commit()
             rps = db.query(RatePlan).filter(RatePlan.hotel_id == hotel_id).all()
 
+        # 7. Ensure Swarm Sub-Agents & Demo Sessions exist
+        try:
+            from app.services.agent_swarm_service import agent_swarm_service
+            agent_swarm_service.seed_default_swarm_members(db, hotel_id)
+        except Exception as swarm_err:
+            logger.warning("swarm_seeding_failed", hotel_id=hotel_id, error=str(swarm_err))
+
+
+
         # 2. Ensure Reservations exist across past & upcoming 60 days
         existing_res_count = db.query(Reservation).filter(Reservation.hotel_id == hotel_id).count()
         if existing_res_count < 15:

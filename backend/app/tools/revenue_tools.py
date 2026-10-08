@@ -995,6 +995,9 @@ class RegisterWebhookSubscriptionTool(BaseTool):
             "events": sub.events,
             "status": sub.status,
             "created_at": str(sub.created_at),
+        }
+
+
 # --- Tool 35: push_two_way_channel_rates ---
 class PushTwoWayChannelRatesSchema(BaseModel):
     hotel_id: int = Field(..., description="Target Hotel ID")

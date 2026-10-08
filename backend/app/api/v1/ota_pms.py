@@ -9,6 +9,8 @@ from app.schemas.ota_pms import (
     PMSConnectorConfigureRequest,
     PMSConnectorResponse,
     OTAChannelResponse,
+    OTAChannelCreateRequest,
+    OTAChannelUpdateRequest,
     RatePushRequest,
     RatePushResponse,
     PMSReservationPullResponse,
@@ -37,6 +39,59 @@ def get_ota_channels(
     """Retrieve all connected OTA channel mappings, rate parity statuses, and commissions."""
     verify_hotel_access(hotel_id, current_user, db)
     return OTAPMSService.get_ota_channels(hotel_id, db)
+
+@router.post("/ota-channels", response_model=OTAChannelResponse)
+def create_ota_channel(
+    request: OTAChannelCreateRequest,
+    hotel_id: int = Query(..., description="ID of the hotel"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a new OTA distribution channel connection."""
+    verify_hotel_access(hotel_id, current_user, db)
+    return OTAPMSService.create_ota_channel(
+        hotel_id=hotel_id,
+        channel_name=request.channel_name,
+        channel_code=request.channel_code,
+        commission_pct=request.commission_pct,
+        mapped_room_count=request.mapped_room_count,
+        last_pushed_rate_inr=request.last_pushed_rate_inr,
+        db=db,
+    )
+
+@router.put("/ota-channels/{channel_id}", response_model=OTAChannelResponse)
+def update_ota_channel(
+    channel_id: int,
+    request: OTAChannelUpdateRequest,
+    hotel_id: int = Query(..., description="ID of the hotel"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update OTA channel details, including editable commission percentage and parity status."""
+    verify_hotel_access(hotel_id, current_user, db)
+    updated = OTAPMSService.update_ota_channel(
+        hotel_id=hotel_id,
+        channel_id=channel_id,
+        update_data=request.model_dump(exclude_unset=True),
+        db=db,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="OTA channel not found")
+    return updated
+
+@router.delete("/ota-channels/{channel_id}")
+def delete_ota_channel(
+    channel_id: int,
+    hotel_id: int = Query(..., description="ID of the hotel"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove/disconnect an OTA channel mapping."""
+    verify_hotel_access(hotel_id, current_user, db)
+    deleted = OTAPMSService.delete_ota_channel(hotel_id, channel_id, db)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="OTA channel not found")
+    return {"message": "OTA channel deleted successfully", "channel_id": channel_id}
 
 @router.post("/push-rates", response_model=RatePushResponse)
 def push_two_way_rates(

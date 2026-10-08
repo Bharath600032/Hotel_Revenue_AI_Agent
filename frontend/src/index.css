@@ -144,3 +144,27 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Fix visibility for datepicker calendar picker icons in dark mode across all pages */
+input[type="date"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) hue-rotate(180deg) brightness(1.2);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 3px;
+  opacity: 0.95;
+  transition: all 0.2s ease-in-out;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(1.5);
+  opacity: 1;
+  background-color: rgba(99, 102, 241, 0.25);
+}
+

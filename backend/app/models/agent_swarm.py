@@ -48,3 +48,8 @@ class SwarmSessionLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     hotel = relationship("Hotel", backref="swarm_sessions")
+
+    @property
+    def agent_votes(self):
+        return self.agent_votes_json or []
+

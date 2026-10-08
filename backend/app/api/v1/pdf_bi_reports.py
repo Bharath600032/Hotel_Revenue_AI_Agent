@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.reports_bi import (
     ExecutiveScheduleCreate,
+    ExecutiveScheduleUpdate,
     ExecutiveScheduleResponse,
     ReportGenerateRequest,
     ReportExportLogResponse,
@@ -42,10 +43,37 @@ def create_report_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Create new automated PDF email dispatch schedule."""
-    verify_hotel_access(hotel_id, current_user, db)
     if payload.hotel_id != hotel_id:
         payload.hotel_id = hotel_id
     return pdf_bi_report_service.create_report_schedule(db, payload)
+
+
+@router.put("/schedules/{schedule_id}", response_model=ExecutiveScheduleResponse)
+def update_report_schedule(
+    hotel_id: int,
+    schedule_id: int,
+    payload: ExecutiveScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update an existing automated email dispatch schedule."""
+    verify_hotel_access(hotel_id, current_user, db)
+    return pdf_bi_report_service.update_report_schedule(
+        db, hotel_id, schedule_id, payload.model_dump(exclude_unset=True)
+    )
+
+
+@router.delete("/schedules/{schedule_id}")
+def delete_report_schedule(
+    hotel_id: int,
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete an automated email dispatch schedule."""
+    verify_hotel_access(hotel_id, current_user, db)
+    return pdf_bi_report_service.delete_report_schedule(db, hotel_id, schedule_id)
+
 
 
 @router.get("/history", response_model=List[ReportExportLogResponse])

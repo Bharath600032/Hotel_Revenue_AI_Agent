@@ -110,27 +110,27 @@ export const Revenue: React.FC = () => {
             <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl">
               <span className="text-xs text-slate-400">Total Revenue</span>
               <p className="text-2xl font-bold text-emerald-400 mt-2">
-                ₹{summary?.total_revenue?.toLocaleString() || '1,450,000'}
+                ₹{summary?.total_revenue != null ? summary.total_revenue.toLocaleString('en-IN') : '1,450,000'}
               </p>
               <div className="flex items-center text-xs text-emerald-500 mt-1">
-                <span>+12.4% vs last period</span>
+                <span>Dynamic calculate for selected range</span>
               </div>
             </div>
 
             <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl">
               <span className="text-xs text-slate-400">Occupancy %</span>
               <p className="text-2xl font-bold text-indigo-400 mt-2">
-                {summary?.occupancy_pct || 82.5}%
+                {summary?.occupancy_pct != null ? summary.occupancy_pct : 82.5}%
               </p>
               <div className="flex items-center text-xs text-slate-400 mt-1">
-                <span>{summary?.total_occupied_rooms} of {summary?.total_sellable_rooms} Rooms</span>
+                <span>{summary?.total_occupied_rooms ?? 0} of {summary?.total_sellable_rooms ?? 0} Rooms</span>
               </div>
             </div>
 
             <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl">
               <span className="text-xs text-slate-400">Average Daily Rate (ADR)</span>
               <p className="text-2xl font-bold text-cyan-400 mt-2">
-                ₹{summary?.adr?.toLocaleString() || '7,850'}
+                ₹{summary?.adr != null ? summary.adr.toLocaleString('en-IN') : '7,850'}
               </p>
               <div className="flex items-center text-xs text-cyan-500 mt-1">
                 <span>Optimized dynamic rate</span>
@@ -140,10 +140,10 @@ export const Revenue: React.FC = () => {
             <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl">
               <span className="text-xs text-slate-400">RevPAR</span>
               <p className="text-2xl font-bold text-amber-400 mt-2">
-                ₹{summary?.revpar?.toLocaleString() || '6,476'}
+                ₹{summary?.revpar != null ? summary.revpar.toLocaleString('en-IN') : '6,476'}
               </p>
               <div className="flex items-center text-xs text-amber-500 mt-1">
-                <span>TRevPAR: ₹{summary?.trevpar?.toLocaleString() || '8,120'}</span>
+                <span>TRevPAR: ₹{summary?.trevpar != null ? summary.trevpar.toLocaleString('en-IN') : '8,120'}</span>
               </div>
             </div>
           </div>
@@ -158,15 +158,21 @@ export const Revenue: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-xs text-slate-400">Average Booking Lead Time</span>
-                  <span className="text-sm font-bold text-white">{summary?.average_lead_time_days || 14.2} Days</span>
+                  <span className="text-sm font-bold text-white">
+                    {summary?.average_lead_time_days != null ? `${summary.average_lead_time_days} Days` : '14.2 Days'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-xs text-slate-400">Cancellation Rate</span>
-                  <span className="text-sm font-bold text-rose-400">{summary?.cancellation_rate_pct || 4.1}%</span>
+                  <span className="text-sm font-bold text-rose-400">
+                    {summary?.cancellation_rate_pct != null ? `${summary.cancellation_rate_pct}%` : '4.1%'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-xs text-slate-400">Total Sellable Room Nights</span>
-                  <span className="text-sm font-bold text-white">{summary?.total_sellable_rooms || 3600}</span>
+                  <span className="text-sm font-bold text-white">
+                    {summary?.total_sellable_rooms != null ? summary.total_sellable_rooms.toLocaleString() : '3,600'}
+                  </span>
                 </div>
               </div>
             </div>

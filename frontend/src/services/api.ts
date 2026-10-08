@@ -471,6 +471,17 @@ export const apiService = {
     return res.data;
   },
 
+  updateReportSchedule: async (hotelId: number, scheduleId: number, data: any): Promise<any> => {
+    const res = await apiClient.put(`/hotels/${hotelId}/executive-reports/schedules/${scheduleId}`, data);
+    return res.data;
+  },
+
+  deleteReportSchedule: async (hotelId: number, scheduleId: number): Promise<any> => {
+    const res = await apiClient.delete(`/hotels/${hotelId}/executive-reports/schedules/${scheduleId}`);
+    return res.data;
+  },
+
+
   getReportExportHistory: async (hotelId: number): Promise<any[]> => {
     const res = await apiClient.get(`/hotels/${hotelId}/executive-reports/history`);
     return res.data;
@@ -574,6 +585,27 @@ export const apiService = {
 
   getOTAChannels: async (hotelId: number): Promise<any[]> => {
     const res = await apiClient.get(`/channels/ota-channels`, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  createOTAChannel: async (hotelId: number, data: { channel_name: string; channel_code: string; commission_pct: number; mapped_room_count?: number; last_pushed_rate_inr?: number }): Promise<any> => {
+    const res = await apiClient.post(`/channels/ota-channels`, data, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  updateOTAChannel: async (hotelId: number, channelId: number, data: { channel_name?: string; commission_pct?: number; connection_status?: string; rate_parity_status?: string; mapped_room_count?: number; last_pushed_rate_inr?: number }): Promise<any> => {
+    const res = await apiClient.put(`/channels/ota-channels/${channelId}`, data, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
+  deleteOTAChannel: async (hotelId: number, channelId: number): Promise<any> => {
+    const res = await apiClient.delete(`/channels/ota-channels/${channelId}`, {
       params: { hotel_id: hotelId },
     });
     return res.data;

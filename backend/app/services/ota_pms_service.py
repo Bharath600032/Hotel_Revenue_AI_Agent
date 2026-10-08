@@ -25,8 +25,8 @@ class OTAPMSService:
             db.add(pms)
             db.commit()
 
-        existing_channels = db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).count()
-        if existing_channels == 0:
+        existing_channels = db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).all()
+        if not existing_channels:
             default_channels = [
                 {"name": "Booking.com", "code": "BCOM", "commission": 18.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
                 {"name": "MakeMyTrip (MMT)", "code": "MMT", "commission": 20.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
@@ -34,6 +34,8 @@ class OTAPMSService:
                 {"name": "Agoda", "code": "AGD", "commission": 17.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
                 {"name": "Expedia", "code": "EXP", "commission": 19.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
                 {"name": "Airbnb", "code": "ARB", "commission": 15.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
+                {"name": "Yatra", "code": "YTR", "commission": 16.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
+                {"name": "Trip.com", "code": "TRIP", "commission": 15.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
             ]
             for c in default_channels:
                 ch = OTAChannelConnection(
@@ -56,11 +58,11 @@ class OTAPMSService:
                 sync_type="RATE_PUSH",
                 target_channel="ALL_CHANNELS",
                 status="SUCCESS",
-                records_processed=6,
+                records_processed=8,
                 details_json={
                     "event": "Automated 2-Way Rate Sync",
                     "pushed_rate_inr": 9500.0,
-                    "channels_updated": ["OPERA_CLOUD", "BCOM", "MMT", "GOI", "AGD", "EXP"],
+                    "channels_updated": ["OPERA_CLOUD", "BCOM", "MMT", "GOI", "AGD", "EXP", "ARB", "YTR", "TRIP"],
                     "parity_check": "COMPLIANT",
                 },
                 execution_time_ms=64.8,
@@ -77,7 +79,76 @@ class OTAPMSService:
     @classmethod
     def get_ota_channels(cls, hotel_id: int, db: Session) -> List[OTAChannelConnection]:
         cls.seed_default_ota_pms_data(hotel_id, db)
-        return db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).all()
+        all_channels = db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).all()
+        unique_map: Dict[str, OTAChannelConnection] = {}
+        for c in all_channels:
+            if c.channel_code not in unique_map:
+                unique_map[c.channel_code] = c
+        return list(unique_map.values())
+
+    @classmethod
+    def create_ota_channel(
+        cls,
+        hotel_id: int,
+        channel_name: str,
+        channel_code: str,
+        commission_pct: float,
+        mapped_room_count: Optional[int],
+        last_pushed_rate_inr: Optional[float],
+        db: Session,
+    ) -> OTAChannelConnection:
+        cls.seed_default_ota_pms_data(hotel_id, db)
+        ch = OTAChannelConnection(
+            hotel_id=hotel_id,
+            channel_name=channel_name,
+            channel_code=channel_code.upper(),
+            connection_status="ACTIVE",
+            commission_pct=commission_pct,
+            rate_parity_status="PARITY_OK",
+            mapped_room_count=mapped_room_count or 8,
+            last_pushed_rate_inr=last_pushed_rate_inr or 9500.0,
+            last_sync_at=datetime.utcnow(),
+        )
+        db.add(ch)
+        db.commit()
+        db.refresh(ch)
+        return ch
+
+    @classmethod
+    def update_ota_channel(
+        cls,
+        hotel_id: int,
+        channel_id: int,
+        update_data: Dict[str, Any],
+        db: Session,
+    ) -> Optional[OTAChannelConnection]:
+        ch = db.query(OTAChannelConnection).filter(
+            OTAChannelConnection.id == channel_id,
+            OTAChannelConnection.hotel_id == hotel_id,
+        ).first()
+        if not ch:
+            return None
+
+        for field, value in update_data.items():
+            if value is not None and hasattr(ch, field):
+                setattr(ch, field, value)
+
+        ch.last_sync_at = datetime.utcnow()
+        db.commit()
+        db.refresh(ch)
+        return ch
+
+    @classmethod
+    def delete_ota_channel(cls, hotel_id: int, channel_id: int, db: Session) -> bool:
+        ch = db.query(OTAChannelConnection).filter(
+            OTAChannelConnection.id == channel_id,
+            OTAChannelConnection.hotel_id == hotel_id,
+        ).first()
+        if ch:
+            db.delete(ch)
+            db.commit()
+            return True
+        return False
 
     @classmethod
     def push_rates(

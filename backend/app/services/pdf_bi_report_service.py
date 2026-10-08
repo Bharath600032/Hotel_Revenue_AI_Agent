@@ -144,6 +144,41 @@ class PDFBIReportService:
         db.refresh(sched)
         return sched
 
+    def update_report_schedule(self, db: Session, hotel_id: int, schedule_id: int, payload_dict: Dict[str, Any]) -> ExecutiveReportSchedule:
+        """Update an existing report dispatch schedule."""
+        self.seed_demo_schedules_and_logs(db, hotel_id)
+        sched = (
+            db.query(ExecutiveReportSchedule)
+            .filter(ExecutiveReportSchedule.schedule_id == schedule_id, ExecutiveReportSchedule.hotel_id == hotel_id)
+            .first()
+        )
+        if not sched:
+            raise ValueError(f"Report schedule #{schedule_id} not found.")
+
+        for key, val in payload_dict.items():
+            if val is not None and hasattr(sched, key):
+                setattr(sched, key, val)
+
+        db.commit()
+        db.refresh(sched)
+        return sched
+
+    def delete_report_schedule(self, db: Session, hotel_id: int, schedule_id: int) -> Dict[str, Any]:
+        """Delete a report dispatch schedule."""
+        self.seed_demo_schedules_and_logs(db, hotel_id)
+        sched = (
+            db.query(ExecutiveReportSchedule)
+            .filter(ExecutiveReportSchedule.schedule_id == schedule_id, ExecutiveReportSchedule.hotel_id == hotel_id)
+            .first()
+        )
+        if not sched:
+            raise ValueError(f"Report schedule #{schedule_id} not found.")
+
+        db.delete(sched)
+        db.commit()
+        return {"status": "SUCCESS", "message": f"Schedule #{schedule_id} deleted successfully."}
+
+
     def get_export_logs(self, db: Session, hotel_id: int) -> List[ReportExportLog]:
         """Fetch report export log history for a hotel."""
         self.seed_demo_schedules_and_logs(db, hotel_id)
