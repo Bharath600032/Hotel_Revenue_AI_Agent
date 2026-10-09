@@ -26,9 +26,9 @@ async def list_audit_logs(
     """Retrieve immutable audit trail log records with action and entity filters."""
     query = db.query(AuditLogs)
     if action:
-        query = query.filter(AuditLogs.action == action)
+        query = query.filter(AuditLogs.action.ilike(f"%{action.strip()}%"))
     if entity_type:
-        query = query.filter(AuditLogs.entity_type == entity_type)
+        query = query.filter(AuditLogs.entity_type.ilike(f"%{entity_type.strip()}%"))
     if user_id:
         query = query.filter(AuditLogs.user_id == user_id)
 

@@ -189,11 +189,13 @@ export interface ForecastItem {
 export interface AuditLogItem {
   audit_id: number;
   user_id?: number;
+  hotel_id?: number;
   action: string;
   entity_type: string;
-  entity_id?: number;
-  old_value?: string;
-  new_value?: string;
+  entity_id?: string | number;
+  details?: any;
+  old_value?: any;
+  new_value?: any;
   ip_address?: string;
   created_at: string;
 }
