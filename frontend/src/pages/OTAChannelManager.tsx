@@ -194,47 +194,42 @@ export const OTAChannelManager: React.FC = () => {
       )}
 
       {/* Header title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 p-6 rounded-2xl border border-slate-800 backdrop-blur-xl shadow-2xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 p-6 rounded-2xl border border-slate-800 backdrop-blur-xl shadow-2xl">
         <div className="flex items-center space-x-4">
-          <div className="p-3 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl shadow-lg shadow-sky-500/20">
+          <div className="p-3 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl shadow-lg shadow-sky-500/20 shrink-0">
             <Globe className="w-7 h-7 text-white" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-2xl font-bold tracking-tight text-white">OTA Channel Manager & PMS 2-Way Sync</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30">
-                LIVE 2-WAY CONNECTOR
-              </span>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">OTA Channel Manager & PMS 2-Way Sync</h1>
             <p className="text-slate-400 text-sm mt-1">
               Synchronize live rate recommendations directly to Opera Cloud PMS, STAAH, Booking.com, MakeMyTrip, and Expedia.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-emerald-600/20"
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Add OTA Channel</span>
           </button>
 
           <button
             onClick={handlePullReservations}
             disabled={isPulling}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium transition border border-slate-700"
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition border border-slate-700 whitespace-nowrap"
           >
-            <ArrowDownLeft className={`w-4 h-4 text-emerald-400 ${isPulling ? 'animate-spin' : ''}`} />
-            <span>{isPulling ? 'Pulling...' : 'Pull PMS Bookings'}</span>
+            <ArrowDownLeft className={`w-4 h-4 text-emerald-400 shrink-0 ${isPulling ? 'animate-spin' : ''}`} />
+            <span>{isPulling ? 'Pulling Bookings...' : 'Pull PMS Bookings'}</span>
           </button>
 
           <button
             onClick={() => setActiveTab('push')}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition shadow-lg shadow-indigo-600/30"
+            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30 whitespace-nowrap"
           >
-            <ArrowUpRight className="w-4 h-4" />
+            <ArrowUpRight className="w-4 h-4 shrink-0" />
             <span>2-Way Rate Push</span>
           </button>
         </div>
