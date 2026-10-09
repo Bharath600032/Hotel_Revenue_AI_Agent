@@ -74,7 +74,9 @@ export const Competitors: React.FC = () => {
 
   const fetchCompetitorData = async () => {
     try {
-      setLoading(true);
+      if (competitors.length === 0) {
+        setLoading(true);
+      }
       const [compList, compAnalysis] = await Promise.all([
         apiService.getCompetitors(hotelId),
         apiService.getCompetitorAnalysis(hotelId, stayDate, myRate),

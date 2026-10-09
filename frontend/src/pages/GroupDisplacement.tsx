@@ -54,7 +54,7 @@ export const GroupDisplacement: React.FC = () => {
 
   // Group Calculator Form state
   const [startDate, setStartDate] = useState(getFutureDateString(3));
-  const [endDate, setEndDate] = useState(getFutureDateString(6));
+  const [endDate, setEndDate] = useState(getFutureDateString(10));
   const [roomsRequested, setRoomsRequested] = useState<number>(20);
   const [offeredRate, setOfferedRate] = useState<number>(7500);
   const [fAndBRevenue, setFAndBRevenue] = useState<number>(85000);
@@ -80,10 +80,32 @@ export const GroupDisplacement: React.FC = () => {
 
   useEffect(() => {
     fetchEvaluationLogs();
+    runInitial7DayEvaluation();
     if (activeTab === 'los_rules') {
       fetchLOSRules(losStartDate, losEndDate);
     }
-  }, [hotelId, activeTab, losStartDate, losEndDate]);
+  }, [hotelId, activeTab]);
+
+  const runInitial7DayEvaluation = async () => {
+    try {
+      const sDate = getFutureDateString(3);
+      const eDate = getFutureDateString(10);
+      const payload: GroupDisplacementRequest = {
+        hotel_id: hotelId,
+        start_date: sDate,
+        end_date: eDate,
+        rooms_requested: 20,
+        offered_rate: 7500,
+        f_and_b_revenue: 85000,
+        meeting_room_rental: 45000,
+        other_ancillary_revenue: 15000,
+      };
+      const response = await apiService.evaluateGroupDisplacement(payload);
+      setEvalResult(response);
+    } catch (err) {
+      console.warn('Initial 7-day evaluation fetch fallback:', err);
+    }
+  };
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -468,7 +490,13 @@ export const GroupDisplacement: React.FC = () => {
 
                 {/* Daily Displacement Chart */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                  <h4 className="text-sm font-semibold text-white">Daily Revenue Displacement Breakdown (INR ₹)</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-white">Daily Revenue Displacement Breakdown (INR ₹)</h4>
+                    <span className="text-xs text-indigo-400 font-mono font-semibold bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                      {evalResult.daily_breakdown.length}-Day Daily Horizon Projected
+                    </span>
+                  </div>
+
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={evalResult.daily_breakdown}>
@@ -476,7 +504,9 @@ export const GroupDisplacement: React.FC = () => {
                         <XAxis dataKey="stay_date" stroke="#64748b" tick={{ fontSize: 11 }} />
                         <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                          contentStyle={{ backgroundColor: '#0f172a', borderColor: '#f59e0b', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
+                          itemStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                          labelStyle={{ color: '#f59e0b', fontWeight: 700 }}
                           formatter={(value: any, name: any) => [
                             name.includes('Lost') ? formatINR(Number(value)) : value,
                             name,
@@ -487,6 +517,36 @@ export const GroupDisplacement: React.FC = () => {
                         <Bar dataKey="transient_revenue_lost" name="Transient Revenue Lost (₹)" fill="#ef4444" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                  </div>
+
+                  {/* 7-Day Breakdown Table Grid */}
+                  <div className="pt-4 border-t border-slate-800/80">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+                          <tr>
+                            <th className="py-2.5 px-3">Stay Date</th>
+                            <th className="py-2.5 px-3 text-center">Group Rooms</th>
+                            <th className="py-2.5 px-3 text-center">Avail Capacity</th>
+                            <th className="py-2.5 px-3 text-center">Displaced Rooms</th>
+                            <th className="py-2.5 px-3 text-right">Transient ADR (₹)</th>
+                            <th className="py-2.5 px-3 text-right">Revenue Lost (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 font-mono">
+                          {evalResult.daily_breakdown.map((row: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-slate-800/40">
+                              <td className="py-2.5 px-3 text-white font-sans font-medium">{row.stay_date}</td>
+                              <td className="py-2.5 px-3 text-center text-slate-300 font-bold">{row.group_rooms || roomsRequested}</td>
+                              <td className="py-2.5 px-3 text-center text-slate-400">{row.available_capacity ?? 80}</td>
+                              <td className="py-2.5 px-3 text-center text-amber-400 font-bold">{row.displaced_transient_rooms}</td>
+                              <td className="py-2.5 px-3 text-right text-slate-300">{formatINR(row.transient_rate || 8500)}</td>
+                              <td className="py-2.5 px-3 text-right text-rose-400 font-bold">{formatINR(row.transient_revenue_lost)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </>

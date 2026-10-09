@@ -325,7 +325,9 @@ export const Dashboard: React.FC = () => {
                   <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                   <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', color: '#fff', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#6366f1', borderRadius: '0.75rem', color: '#fff', fontSize: '12px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.7)' }}
+                    itemStyle={{ color: '#818cf8', fontWeight: 700 }}
+                    labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
                     formatter={(val: any) => [`₹${Number(val).toLocaleString()}`, 'RevPAR']}
                   />
                   <Area type="monotone" dataKey="RevPAR" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRevPAR)" />

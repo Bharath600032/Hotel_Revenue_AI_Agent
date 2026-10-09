@@ -218,7 +218,9 @@ export const AgentSwarmArchitecture: React.FC = () => {
 
   const fetchSwarmData = async () => {
     try {
-      setLoading(true);
+      if (members.length === 0 && sessions.length === 0) {
+        setLoading(true);
+      }
       const [membersData, sessionsData] = await Promise.all([
         apiService.getSwarmMembers(hotelId).catch(() => null),
         apiService.getSwarmSessions(hotelId).catch(() => null),

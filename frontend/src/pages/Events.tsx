@@ -75,7 +75,9 @@ export const Events: React.FC = () => {
 
   const fetchEventData = async () => {
     try {
-      setLoading(true);
+      if (events.length === 0 && holidays.length === 0) {
+        setLoading(true);
+      }
       const [evtData, holData, impData, wData] = await Promise.all([
         apiService.getEvents(activeCity),
         apiService.getHolidays('India'),

@@ -77,7 +77,9 @@ export const TRevPARAncillary: React.FC = () => {
 
   const fetchTRevPARData = async () => {
     try {
-      setLoading(true);
+      if (!summary || packages.length === 0) {
+        setLoading(true);
+      }
       const [sumData, pkgData] = await Promise.all([
         apiService.getTRevPARSummary(hotelId, startDate, endDate),
         apiService.getAncillaryPackages(hotelId),
@@ -309,7 +311,9 @@ export const TRevPARAncillary: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#38bdf8', borderRadius: '10px', fontSize: '13px', color: '#ffffff', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.7)' }}
+                      itemStyle={{ color: '#38bdf8', fontWeight: 700 }}
+                      labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
                       formatter={(val: any) => [formatINR(Number(val)), 'Revenue']}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />

@@ -50,7 +50,9 @@ export const Forecasting: React.FC = () => {
 
   const loadForecasts = async () => {
     try {
-      setLoading(true);
+      if (forecasts.length === 0) {
+        setLoading(true);
+      }
       const today = new Date().toISOString().split('T')[0];
       const endDate = new Date(Date.now() + horizonDays * 86400000).toISOString().split('T')[0];
       const data = await apiService.getForecasts(hotelId, roomTypeId, today, endDate);
@@ -176,7 +178,11 @@ export const Forecasting: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="date" stroke="#64748b" />
                 <YAxis stroke="#64748b" label={{ value: 'Rooms', angle: -90, position: 'insideLeft', fill: '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#10b981', borderRadius: '8px', color: '#fff' }}
+                  itemStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                  labelStyle={{ color: '#38bdf8', fontWeight: 700 }}
+                />
                 <Legend />
                 <Area type="monotone" dataKey="UpperBound" fill="url(#colorBound)" stroke="#059669" strokeDasharray="3 3" name="Upper Confidence Bound" />
                 <Line type="monotone" dataKey="Demand" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} name="Predicted Demand" />

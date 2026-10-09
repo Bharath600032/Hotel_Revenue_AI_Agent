@@ -34,7 +34,9 @@ export const Revenue: React.FC = () => {
 
   const fetchMetrics = async () => {
     try {
-      setLoading(true);
+      if (!summary) {
+        setLoading(true);
+      }
       const [sumData, pickData] = await Promise.all([
         apiService.getRevenueSummary(hotelId, startDate, endDate),
         apiService.getPickupPace(hotelId, stayDate),
@@ -199,7 +201,11 @@ export const Revenue: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                       <XAxis dataKey="window" stroke="#64748b" />
                       <YAxis stroke="#64748b" />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff' }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#38bdf8', borderRadius: '8px', color: '#fff' }}
+                        itemStyle={{ color: '#38bdf8', fontWeight: 700 }}
+                        labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                      />
                       <Bar dataKey="pickup" fill="#38bdf8" radius={[6, 6, 0, 0]} name="Rooms Picked Up" />
                     </BarChart>
                   </ResponsiveContainer>

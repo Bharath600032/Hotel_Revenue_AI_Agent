@@ -57,7 +57,9 @@ export const ExecutiveReportsBI: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (exportLogs.length === 0) {
+        setLoading(true);
+      }
       const [logs, scheds, biData] = await Promise.all([
         apiService.getReportExportHistory(hotelId),
         apiService.getReportSchedules(hotelId),

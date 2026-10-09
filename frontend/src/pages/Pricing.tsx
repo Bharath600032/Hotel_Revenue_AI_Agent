@@ -29,7 +29,9 @@ export const Pricing: React.FC = () => {
 
   const fetchPricingData = async () => {
     try {
-      setLoading(true);
+      if (recommendations.length === 0) {
+        setLoading(true);
+      }
       const recs = await apiService.getRecommendations(hotelId);
       setRecommendations(recs);
     } catch (err) {
