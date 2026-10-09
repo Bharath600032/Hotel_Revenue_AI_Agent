@@ -18,7 +18,8 @@ import {
   EyeOff,
   AlertCircle,
   Clock,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
 
 interface UserAccount {
