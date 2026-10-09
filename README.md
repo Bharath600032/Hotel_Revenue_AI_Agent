@@ -54,3 +54,4 @@ npm run dev
   - **Analyst**: `analyst@revenueagent.ai` / `Analyst123!Pass`
 
 # Revenue_AI_Agent
+# Hotel_Revenue_AI_Agent
