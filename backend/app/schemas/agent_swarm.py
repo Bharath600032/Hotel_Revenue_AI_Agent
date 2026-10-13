@@ -47,8 +47,8 @@ class SwarmConsensusResponse(BaseModel):
     overall_confidence_pct: float
     conflict_detected: bool
     status: str
-    agent_votes: Optional[List[Dict[str, Any]]] = Field(default=[], alias="agent_votes_json")
     agent_votes_json: Optional[List[Dict[str, Any]]] = None
+    agent_votes: Optional[List[Dict[str, Any]]] = None
     synthesis_rationale: str
     created_at: datetime
 

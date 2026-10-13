@@ -39,7 +39,7 @@ class GroupDisplacementLog(Base):
 
     displacement_id = Column(Integer, primary_key=True, index=True)
     hotel_id = Column(Integer, ForeignKey("hotels.hotel_id"), nullable=False, index=True)
-    room_type_id = Column(Integer, ForeignKey("room_types.room_type_id"), nullable=False, index=True)
+    room_type_id = Column(Integer, ForeignKey("room_types.room_type_id"), nullable=True, index=True)
 
     group_name = Column(String(150), nullable=False)
     rooms_requested = Column(Integer, nullable=False)

@@ -7524,8 +7524,8 @@
     "created_at": "2026-10-13T07:47:53.889006+00:00"
   },
   {
-    "document_id": "doc_52e23bf2d1",
-    "chunk_id": "doc_52e23bf2d1_c0",
+    "document_id": "doc_0f7053f1e4",
+    "chunk_id": "doc_0f7053f1e4_c0",
     "title": "Hotel Profile - Cute Orange Hotel",
     "category": "Hotel Profile",
     "hotel_id": 4,
@@ -7917,11 +7917,11 @@
       0.004718018726455588,
       0.00146579222569494
     ],
-    "created_at": "2026-10-13T10:02:24.035013+00:00"
+    "created_at": "2026-10-13T11:18:44.656340+00:00"
   },
   {
-    "document_id": "doc_0e199a178c",
-    "chunk_id": "doc_0e199a178c_c0",
+    "document_id": "doc_5719cf8627",
+    "chunk_id": "doc_5719cf8627_c0",
     "title": "Competitors List & Rates - Cute Orange Hotel",
     "category": "Competitor Intel",
     "hotel_id": 4,
@@ -8313,11 +8313,11 @@
       0.003659404569809974,
       0.0032421040486912927
     ],
-    "created_at": "2026-10-13T10:02:24.463149+00:00"
+    "created_at": "2026-10-13T11:18:44.746334+00:00"
   },
   {
-    "document_id": "doc_cd8ef4c10f",
-    "chunk_id": "doc_cd8ef4c10f_c0",
+    "document_id": "doc_da022914e5",
+    "chunk_id": "doc_da022914e5_c0",
     "title": "Room Categories & Inventory - Cute Orange Hotel",
     "category": "Room Inventory",
     "hotel_id": 4,
@@ -8709,11 +8709,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-13T10:02:24.888104+00:00"
+    "created_at": "2026-10-13T11:18:44.839321+00:00"
   },
   {
-    "document_id": "doc_d26b6b1b21",
-    "chunk_id": "doc_d26b6b1b21_c0",
+    "document_id": "doc_54f6751637",
+    "chunk_id": "doc_54f6751637_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -9105,11 +9105,11 @@
       0.009538864620559218,
       0.00826133810887718
     ],
-    "created_at": "2026-10-13T10:02:25.404813+00:00"
+    "created_at": "2026-10-13T11:18:44.925325+00:00"
   },
   {
-    "document_id": "doc_d26b6b1b21",
-    "chunk_id": "doc_d26b6b1b21_c1",
+    "document_id": "doc_54f6751637",
+    "chunk_id": "doc_54f6751637_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -9501,11 +9501,11 @@
       0.009362407475371303,
       0.00851127952306482
     ],
-    "created_at": "2026-10-13T10:02:25.405812+00:00"
+    "created_at": "2026-10-13T11:18:44.925325+00:00"
   },
   {
-    "document_id": "doc_da700cdeb3",
-    "chunk_id": "doc_da700cdeb3_c0",
+    "document_id": "doc_60c8e520ea",
+    "chunk_id": "doc_60c8e520ea_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -9897,11 +9897,11 @@
       0.005739521717880621,
       0.0051952567273919415
     ],
-    "created_at": "2026-10-13T10:02:25.714577+00:00"
+    "created_at": "2026-10-13T11:18:45.005317+00:00"
   },
   {
-    "document_id": "doc_52fe679a72",
-    "chunk_id": "doc_52fe679a72_c0",
+    "document_id": "doc_b45925821a",
+    "chunk_id": "doc_b45925821a_c0",
     "title": "Hotel Profile - Harrisons Hotel",
     "category": "Hotel Profile",
     "hotel_id": 5,
@@ -10293,11 +10293,11 @@
       0.0030689474787483624,
       0.00535920679124714
     ],
-    "created_at": "2026-10-13T10:02:26.143876+00:00"
+    "created_at": "2026-10-13T11:18:45.095547+00:00"
   },
   {
-    "document_id": "doc_de308a413d",
-    "chunk_id": "doc_de308a413d_c0",
+    "document_id": "doc_74edb1a799",
+    "chunk_id": "doc_74edb1a799_c0",
     "title": "Competitors List & Rates - Harrisons Hotel",
     "category": "Competitor Intel",
     "hotel_id": 5,
@@ -10689,11 +10689,11 @@
       0.0031136370964284315,
       0.0032099351509571462
     ],
-    "created_at": "2026-10-13T10:02:26.312041+00:00"
+    "created_at": "2026-10-13T11:18:45.185551+00:00"
   },
   {
-    "document_id": "doc_3f9ab603b5",
-    "chunk_id": "doc_3f9ab603b5_c0",
+    "document_id": "doc_07ee5e59ca",
+    "chunk_id": "doc_07ee5e59ca_c0",
     "title": "Room Categories & Inventory - Harrisons Hotel",
     "category": "Room Inventory",
     "hotel_id": 5,
@@ -11085,11 +11085,11 @@
       0.002744414117991334,
       0.002156325378421762
     ],
-    "created_at": "2026-10-13T10:02:26.484121+00:00"
+    "created_at": "2026-10-13T11:18:45.268483+00:00"
   },
   {
-    "document_id": "doc_ea2c644b66",
-    "chunk_id": "doc_ea2c644b66_c0",
+    "document_id": "doc_82fd0147fc",
+    "chunk_id": "doc_82fd0147fc_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -11481,11 +11481,11 @@
       0.009538864620559218,
       0.00826133810887718
     ],
-    "created_at": "2026-10-13T10:02:26.708934+00:00"
+    "created_at": "2026-10-13T11:18:45.361969+00:00"
   },
   {
-    "document_id": "doc_ea2c644b66",
-    "chunk_id": "doc_ea2c644b66_c1",
+    "document_id": "doc_82fd0147fc",
+    "chunk_id": "doc_82fd0147fc_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -11877,11 +11877,11 @@
       0.009362407475371303,
       0.00851127952306482
     ],
-    "created_at": "2026-10-13T10:02:26.708934+00:00"
+    "created_at": "2026-10-13T11:18:45.361969+00:00"
   },
   {
-    "document_id": "doc_8959ba9998",
-    "chunk_id": "doc_8959ba9998_c0",
+    "document_id": "doc_41b34d5809",
+    "chunk_id": "doc_41b34d5809_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -12273,11 +12273,11 @@
       0.005739521717880621,
       0.0051952567273919415
     ],
-    "created_at": "2026-10-13T10:02:26.933700+00:00"
+    "created_at": "2026-10-13T11:18:45.453857+00:00"
   },
   {
-    "document_id": "doc_131cf3a05b",
-    "chunk_id": "doc_131cf3a05b_c0",
+    "document_id": "doc_fe0c53d0c0",
+    "chunk_id": "doc_fe0c53d0c0_c0",
     "title": "Hotel Profile - Skyline Suites",
     "category": "Hotel Profile",
     "hotel_id": 6,
@@ -12669,11 +12669,11 @@
       0.004809513067659834,
       0.005267561931246486
     ],
-    "created_at": "2026-10-13T10:02:27.241720+00:00"
+    "created_at": "2026-10-13T11:18:45.544567+00:00"
   },
   {
-    "document_id": "doc_2e67eba9be",
-    "chunk_id": "doc_2e67eba9be_c0",
+    "document_id": "doc_fe76e71b24",
+    "chunk_id": "doc_fe76e71b24_c0",
     "title": "Competitors List & Rates - Skyline Suites",
     "category": "Competitor Intel",
     "hotel_id": 6,
@@ -13065,11 +13065,11 @@
       0.0032420141089689303,
       0.0010271727870000572
     ],
-    "created_at": "2026-10-13T10:02:27.570667+00:00"
+    "created_at": "2026-10-13T11:18:45.634080+00:00"
   },
   {
-    "document_id": "doc_d0eb176590",
-    "chunk_id": "doc_d0eb176590_c0",
+    "document_id": "doc_c402070141",
+    "chunk_id": "doc_c402070141_c0",
     "title": "Room Categories & Inventory - Skyline Suites",
     "category": "Room Inventory",
     "hotel_id": 6,
@@ -13461,11 +13461,11 @@
       0.0015682428177872826,
       0.4105365651438771
     ],
-    "created_at": "2026-10-13T10:02:27.781863+00:00"
+    "created_at": "2026-10-13T11:18:45.736440+00:00"
   },
   {
-    "document_id": "doc_2cdd2848a4",
-    "chunk_id": "doc_2cdd2848a4_c0",
+    "document_id": "doc_3e13af23d4",
+    "chunk_id": "doc_3e13af23d4_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -13857,11 +13857,11 @@
       0.009538864620559218,
       0.00826133810887718
     ],
-    "created_at": "2026-10-13T10:02:28.010274+00:00"
+    "created_at": "2026-10-13T11:18:45.834129+00:00"
   },
   {
-    "document_id": "doc_2cdd2848a4",
-    "chunk_id": "doc_2cdd2848a4_c1",
+    "document_id": "doc_3e13af23d4",
+    "chunk_id": "doc_3e13af23d4_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -14253,11 +14253,11 @@
       0.009362407475371303,
       0.00851127952306482
     ],
-    "created_at": "2026-10-13T10:02:28.010274+00:00"
+    "created_at": "2026-10-13T11:18:45.834129+00:00"
   },
   {
-    "document_id": "doc_5755da021f",
-    "chunk_id": "doc_5755da021f_c0",
+    "document_id": "doc_9eae59cf64",
+    "chunk_id": "doc_9eae59cf64_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -14649,16 +14649,16 @@
       0.005739521717880621,
       0.0051952567273919415
     ],
-    "created_at": "2026-10-13T10:02:28.223016+00:00"
+    "created_at": "2026-10-13T11:18:45.946637+00:00"
   },
   {
-    "document_id": "doc_b91ab71794",
-    "chunk_id": "doc_b91ab71794_c0",
+    "document_id": "doc_8c37f3c888",
+    "chunk_id": "doc_8c37f3c888_c0",
     "title": "Hotel Profile - Cute Orange Hotel",
     "category": "Hotel Profile",
     "hotel_id": 7,
     "version": "Live App Sync",
-    "chunk": "HOTEL PROFILE & SPECIFICATIONS: Cute Orange Hotel \u2022 Property Name: Cute Orange Hotel \u2022 Location & City: Chennai, Tamil Nadu, India \u2022 Star Rating: 4.0 Stars \u2022 Total Room Capacity: 45 Rooms \u2022 Check-in Time: 2:00 PM | Check-out Time: 11:00 AM \u2022 Amenities & Facilities: Outdoor Swimming Pool, 24/7 Fitness Center, Complimentary High-Speed Wi-Fi, 24-hour Concierge, Valet Parking \u2022 Dining & Cuisine: Spice Route Restaurant (Multi-cuisine buffet & \u00e0 la carte, 7:00 AM - 11:00 PM), 24-hour in-room dining \u2022 Contact & Reservations: +91 44 2855 0000 | reservations@cuteorangehotel.com \u2022 Autonomous Dynamic Price Floor: \u20b92,500 \u2022 Autonomous Dynamic Price Ceiling: \u20b918,000 \u2022 Currency: INR \u2022 Status: ACTIVE",
+    "chunk": "HOTEL PROFILE & SPECIFICATIONS: Cute Orange Hotel \u2022 Property Name: Cute Orange Hotel \u2022 Location & City: Chennai, Tamil Nadu, India \u2022 Star Rating: 4.0 Stars \u2022 Total Room Capacity: 45 Rooms \u2022 Check-in Time: 2:00 PM | Check-out Time: 11:00 AM \u2022 Amenities & Facilities: Outdoor Swimming Pool, 24/7 Fitness Center, Complimentary High-Speed Wi-Fi, 24-hour Concierge, Valet Parking \u2022 Dining & Cuisine: Spice Route Restaurant (Multi-cuisine buffet & \u00e0 la carte, 7:00 AM - 11:00 PM), 24-hour in-room dining \u2022 Contact & Reservations: +91 44 2855 0000 | reservations@cuteorangehotel.com \u2022 Autonomous Dynamic Price Floor: \u20b92,500 \u2022 Autonomous Dynamic Price Ceiling: \u20b918,000 \u2022 Currency: INR \u2022 Status: INACTIVE",
     "embedding": [
       0.003298029355803794,
       0.003618671098729163,
@@ -15045,11 +15045,11 @@
       0.0047180142173304275,
       0.0014657908248016862
     ],
-    "created_at": "2026-10-13T10:02:28.487920+00:00"
+    "created_at": "2026-10-13T11:20:22.767088+00:00"
   },
   {
-    "document_id": "doc_85dba47d61",
-    "chunk_id": "doc_85dba47d61_c0",
+    "document_id": "doc_e075782d27",
+    "chunk_id": "doc_e075782d27_c0",
     "title": "Competitors List & Rates - Cute Orange Hotel",
     "category": "Competitor Intel",
     "hotel_id": 7,
@@ -15441,11 +15441,11 @@
       0.003694133571573458,
       0.003561011641066306
     ],
-    "created_at": "2026-10-13T10:02:28.724308+00:00"
+    "created_at": "2026-10-13T11:20:23.000742+00:00"
   },
   {
-    "document_id": "doc_d5cac34163",
-    "chunk_id": "doc_d5cac34163_c0",
+    "document_id": "doc_48686b86a7",
+    "chunk_id": "doc_48686b86a7_c0",
     "title": "Room Categories & Inventory - Cute Orange Hotel",
     "category": "Room Inventory",
     "hotel_id": 7,
@@ -15837,11 +15837,11 @@
       0.005912132523077953,
       0.0053209192707701575
     ],
-    "created_at": "2026-10-13T10:02:29.037844+00:00"
+    "created_at": "2026-10-13T11:20:23.170728+00:00"
   },
   {
-    "document_id": "doc_8d7be3451f",
-    "chunk_id": "doc_8d7be3451f_c0",
+    "document_id": "doc_0ef3876e4c",
+    "chunk_id": "doc_0ef3876e4c_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 7,
@@ -16233,11 +16233,11 @@
       0.009538864620559218,
       0.00826133810887718
     ],
-    "created_at": "2026-10-13T10:02:29.168749+00:00"
+    "created_at": "2026-10-13T11:20:23.305425+00:00"
   },
   {
-    "document_id": "doc_8d7be3451f",
-    "chunk_id": "doc_8d7be3451f_c1",
+    "document_id": "doc_0ef3876e4c",
+    "chunk_id": "doc_0ef3876e4c_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 7,
@@ -16629,11 +16629,11 @@
       0.009362407475371303,
       0.00851127952306482
     ],
-    "created_at": "2026-10-13T10:02:29.168749+00:00"
+    "created_at": "2026-10-13T11:20:23.305425+00:00"
   },
   {
-    "document_id": "doc_c038208b6e",
-    "chunk_id": "doc_c038208b6e_c0",
+    "document_id": "doc_599d27b991",
+    "chunk_id": "doc_599d27b991_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 7,
@@ -17025,16 +17025,16 @@
       0.005739521717880621,
       0.0051952567273919415
     ],
-    "created_at": "2026-10-13T10:02:29.383576+00:00"
+    "created_at": "2026-10-13T11:20:23.478231+00:00"
   },
   {
-    "document_id": "doc_4bab190008",
-    "chunk_id": "doc_4bab190008_c0",
+    "document_id": "doc_ba363730a4",
+    "chunk_id": "doc_ba363730a4_c0",
     "title": "Hotel Profile - Grand Azure Beach Resort & Spa",
     "category": "Hotel Profile",
     "hotel_id": 8,
     "version": "Live App Sync",
-    "chunk": "HOTEL PROFILE & SPECIFICATIONS: Grand Azure Beach Resort & Spa \u2022 Property Name: Grand Azure Beach Resort & Spa \u2022 Location & City: Goa, Tamil Nadu, India \u2022 Star Rating: 5.0 Stars \u2022 Total Room Capacity: 120 Rooms \u2022 Check-in Time: 2:00 PM | Check-out Time: 11:00 AM \u2022 Amenities & Facilities: Outdoor Swimming Pool, 24/7 Fitness Center, Complimentary High-Speed Wi-Fi, 24-hour Concierge, Valet Parking \u2022 Dining & Cuisine: Spice Route Restaurant (Multi-cuisine buffet & \u00e0 la carte, 7:00 AM - 11:00 PM), 24-hour in-room dining \u2022 Contact & Reservations: +91 44 2855 0000 | reservations@cuteorangehotel.com \u2022 Autonomous Dynamic Price Floor: \u20b94,500 \u2022 Autonomous Dynamic Price Ceiling: \u20b935,000 \u2022 Currency: INR \u2022 Status: ACTIVE",
+    "chunk": "HOTEL PROFILE & SPECIFICATIONS: Grand Azure Beach Resort & Spa \u2022 Property Name: Grand Azure Beach Resort & Spa \u2022 Location & City: Goa, Tamil Nadu, India \u2022 Star Rating: 5.0 Stars \u2022 Total Room Capacity: 120 Rooms \u2022 Check-in Time: 2:00 PM | Check-out Time: 11:00 AM \u2022 Amenities & Facilities: Outdoor Swimming Pool, 24/7 Fitness Center, Complimentary High-Speed Wi-Fi, 24-hour Concierge, Valet Parking \u2022 Dining & Cuisine: Spice Route Restaurant (Multi-cuisine buffet & \u00e0 la carte, 7:00 AM - 11:00 PM), 24-hour in-room dining \u2022 Contact & Reservations: +91 44 2855 0000 | reservations@cuteorangehotel.com \u2022 Autonomous Dynamic Price Floor: \u20b94,500 \u2022 Autonomous Dynamic Price Ceiling: \u20b935,000 \u2022 Currency: INR \u2022 Status: INACTIVE",
     "embedding": [
       0.0035606316798359777,
       0.003906804204264476,
@@ -17421,11 +17421,11 @@
       0.0021759415821219863,
       0.00158250296881599
     ],
-    "created_at": "2026-10-13T10:02:29.576646+00:00"
+    "created_at": "2026-10-13T11:20:44.455325+00:00"
   },
   {
-    "document_id": "doc_44b478eef7",
-    "chunk_id": "doc_44b478eef7_c0",
+    "document_id": "doc_2b4ef44ff0",
+    "chunk_id": "doc_2b4ef44ff0_c0",
     "title": "Competitors List & Rates - Grand Azure Beach Resort & Spa",
     "category": "Competitor Intel",
     "hotel_id": 8,
@@ -17817,11 +17817,11 @@
       0.0015975297335162695,
       0.0015975297335162695
     ],
-    "created_at": "2026-10-13T10:02:29.728418+00:00"
+    "created_at": "2026-10-13T11:20:44.965979+00:00"
   },
   {
-    "document_id": "doc_7b93f00f33",
-    "chunk_id": "doc_7b93f00f33_c0",
+    "document_id": "doc_de2529f22f",
+    "chunk_id": "doc_de2529f22f_c0",
     "title": "Room Categories & Inventory - Grand Azure Beach Resort & Spa",
     "category": "Room Inventory",
     "hotel_id": 8,
@@ -18213,11 +18213,11 @@
       0.003815918911587048,
       0.006288204403601192
     ],
-    "created_at": "2026-10-13T10:02:29.950946+00:00"
+    "created_at": "2026-10-13T11:20:45.574019+00:00"
   },
   {
-    "document_id": "doc_b01a287937",
-    "chunk_id": "doc_b01a287937_c0",
+    "document_id": "doc_a0b5290981",
+    "chunk_id": "doc_a0b5290981_c0",
     "title": "Events & Festivals - Goa",
     "category": "Demand Signals",
     "hotel_id": 8,
@@ -18609,11 +18609,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-13T10:02:30.180049+00:00"
+    "created_at": "2026-10-13T11:20:46.091368+00:00"
   },
   {
-    "document_id": "doc_9283b14149",
-    "chunk_id": "doc_9283b14149_c0",
+    "document_id": "doc_29c857ff33",
+    "chunk_id": "doc_29c857ff33_c0",
     "title": "Public Holidays Calendar - Goa",
     "category": "Demand Signals",
     "hotel_id": 8,
@@ -19005,6 +19005,6 @@
       0.005739521717880621,
       0.0051952567273919415
     ],
-    "created_at": "2026-10-13T10:02:30.476123+00:00"
+    "created_at": "2026-10-13T11:20:46.504165+00:00"
   }
 ]

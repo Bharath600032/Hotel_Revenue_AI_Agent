@@ -25,17 +25,27 @@ class OTAPMSService:
             db.add(pms)
             db.commit()
 
+        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        base_rate = 9500.0
+        room_count = 8
+        if hotel:
+            if hotel.room_types:
+                base_rate = round(float(sum(r.base_price for r in hotel.room_types) / len(hotel.room_types)), 2)
+                room_count = len(hotel.room_types)
+            elif hotel.min_price_floor:
+                base_rate = float(hotel.min_price_floor * 1.5)
+
         existing_channels = db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).all()
         if not existing_channels:
             default_channels = [
-                {"name": "Booking.com", "code": "BCOM", "commission": 18.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "MakeMyTrip (MMT)", "code": "MMT", "commission": 20.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Goibibo", "code": "GOI", "commission": 18.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Agoda", "code": "AGD", "commission": 17.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Expedia", "code": "EXP", "commission": 19.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Airbnb", "code": "ARB", "commission": 15.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Yatra", "code": "YTR", "commission": 16.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
-                {"name": "Trip.com", "code": "TRIP", "commission": 15.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": 9500.0},
+                {"name": "Booking.com", "code": "BCOM", "commission": 18.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "MakeMyTrip (MMT)", "code": "MMT", "commission": 20.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Goibibo", "code": "GOI", "commission": 18.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Agoda", "code": "AGD", "commission": 17.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Expedia", "code": "EXP", "commission": 19.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Airbnb", "code": "ARB", "commission": 15.0, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Yatra", "code": "YTR", "commission": 16.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
+                {"name": "Trip.com", "code": "TRIP", "commission": 15.5, "status": "ACTIVE", "parity": "PARITY_OK", "rate": base_rate},
             ]
             for c in default_channels:
                 ch = OTAChannelConnection(
@@ -45,7 +55,7 @@ class OTAPMSService:
                     connection_status=c["status"],
                     commission_pct=c["commission"],
                     rate_parity_status=c["parity"],
-                    mapped_room_count=8,
+                    mapped_room_count=room_count,
                     last_pushed_rate_inr=c["rate"],
                     last_sync_at=datetime.utcnow() - timedelta(minutes=8),
                 )

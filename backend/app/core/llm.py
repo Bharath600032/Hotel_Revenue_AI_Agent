@@ -221,16 +221,18 @@ class MockLLMProvider(LLMProviderInterface):
 
         # Intent 8: Group Displacement Query
         elif any(w in msg_lower for w in ["group", "displacement", "block", "corporate rate", "breakeven", "counter offer", "accept group"]):
+            checkout_dt = (datetime.strptime(extracted_date, "%Y-%m-%d") + timedelta(days=3)).strftime("%Y-%m-%d")
             return {
                 "thought": f"Evaluating group displacement and breakeven rate for stay starting {extracted_date}.",
                 "tool_calls": [
                     {
                         "tool_name": "calculate_group_displacement",
                         "arguments": {
-                            "start_date": extracted_date,
-                            "end_date": (datetime.strptime(extracted_date, "%Y-%m-%d") + timedelta(days=3)).strftime("%Y-%m-%d"),
+                            "group_name": "Corporate Group Request",
+                            "checkin_date": extracted_date,
+                            "checkout_date": checkout_dt,
                             "rooms_requested": 15,
-                            "offered_rate": 180.0,
+                            "offered_rate": 6500.0,
                         },
                     }
                 ],
@@ -244,7 +246,7 @@ class MockLLMProvider(LLMProviderInterface):
                 "tool_calls": [
                     {
                         "tool_name": "get_los_restrictions",
-                        "arguments": {"start_date": extracted_date, "end_date": extracted_date},
+                        "arguments": {"start_date": extracted_date, "days": 14},
                     }
                 ],
                 "content": None,
@@ -252,6 +254,7 @@ class MockLLMProvider(LLMProviderInterface):
 
         # Intent 10: TRevPAR & Non-Room Revenue Analytics Query
         elif any(w in msg_lower for w in ["trevpar", "nrevpar", "revpor", "ancillary", "non-room", "f&b", "spa", "banquet", "parking", "laundry"]):
+            end_dt = (datetime.strptime(extracted_date, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
             return {
                 "thought": "Calculating TRevPAR, NRevPAR, RevPOR, and non-room ancillary revenue streams.",
                 "tool_calls": [
@@ -259,7 +262,7 @@ class MockLLMProvider(LLMProviderInterface):
                         "tool_name": "calculate_trevpar_analytics",
                         "arguments": {
                             "start_date": extracted_date,
-                            "end_date": extracted_date,
+                            "end_date": end_dt,
                         },
                     }
                 ],
@@ -305,7 +308,33 @@ class MockLLMProvider(LLMProviderInterface):
                 "content": None,
             }
 
-        # Intent 13: Policy / SOP / General RAG Query
+        # Intent 13: OTA / PMS Channel Manager & Two-Way Sync Query
+        elif any(w in msg_lower for w in ["pms", "opera", "channel manager", "ota sync", "rate push", "sync status", "distribution channel"]):
+            return {
+                "thought": "Checking 2-way PMS and OTA channel connection status and live reservations.",
+                "tool_calls": [
+                    {
+                        "tool_name": "pull_live_pms_reservations",
+                        "arguments": {},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 14: Multi-Agent Swarm Status & Consensus Query
+        elif any(w in msg_lower for w in ["swarm", "multi-agent", "consensus", "macro", "micro", "negotiation", "swarm status"]):
+            return {
+                "thought": "Querying autonomous multi-agent swarm status and consensus state.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_agent_swarm_status",
+                        "arguments": {},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 15: Policy / SOP / General RAG Query
         return {
             "thought": "Searching RAG Knowledge Base and system records.",
             "tool_calls": [],
@@ -313,6 +342,68 @@ class MockLLMProvider(LLMProviderInterface):
         }
 
 
+class GeminiLLMProvider(LLMProviderInterface):
+    """
+    Live Google Gemini LLM Provider with automatic graceful fallback to MockLLMProvider.
+    Attempts live function-calling and text generation; if offline, unauthenticated, or rate-limited,
+    instantly delegates to MockLLMProvider without crashing.
+    """
+
+    def __init__(self, api_key: str, model_name: str = "gemini-1.5-flash"):
+        self.api_key = api_key
+        self.model_name = model_name
+        self.fallback = MockLLMProvider()
+
+    def generate_response(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tools_declarations: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=system_prompt,
+            )
+            response = model.generate_content(user_message)
+            candidate = response.candidates[0] if response.candidates else None
+
+            tool_calls = []
+            content = None
+            if candidate and candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, "function_call") and part.function_call:
+                        fc = part.function_call
+                        tool_calls.append({
+                            "tool_name": fc.name,
+                            "arguments": dict(fc.args) if fc.args else {},
+                        })
+                    elif hasattr(part, "text") and part.text:
+                        content = part.text
+
+            if tool_calls or content:
+                return {
+                    "thought": f"Gemini response generated via {self.model_name}.",
+                    "tool_calls": tool_calls,
+                    "content": content,
+                }
+            return self.fallback.generate_response(system_prompt, user_message, tools_declarations)
+        except Exception as e:
+            logger.warning("gemini_provider_error_falling_back_to_mock", error=str(e))
+            return self.fallback.generate_response(system_prompt, user_message, tools_declarations)
+
+
 def get_llm_provider() -> LLMProviderInterface:
-    """Factory returning configured LLM provider instance."""
+    """Factory returning configured LLM provider instance with instant offline fallback."""
+    if settings.LLM_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
+        raw_key = (
+            settings.GEMINI_API_KEY.get_secret_value()
+            if hasattr(settings.GEMINI_API_KEY, "get_secret_value")
+            else str(settings.GEMINI_API_KEY)
+        )
+        if raw_key and raw_key.strip() and not raw_key.strip().startswith("YOUR_"):
+            return GeminiLLMProvider(api_key=raw_key.strip())
+
     return MockLLMProvider()

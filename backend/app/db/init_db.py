@@ -16,12 +16,20 @@ def init_db(db: Session) -> None:
     logger.info("creating_database_tables")
     Base.metadata.create_all(bind=engine)
 
-    # Auto-migrate SQLite schema for missing columns
+    # Auto-migrate SQLite/SQL Server schema for missing columns and constraints
     try:
         from sqlalchemy import text
         db.execute(text("ALTER TABLE competitor_rates ADD COLUMN ota_name VARCHAR(100) DEFAULT 'Booking.com'"))
         db.commit()
         logger.info("migrated_competitor_rates_ota_name_column")
+    except Exception:
+        db.rollback()
+
+    try:
+        from sqlalchemy import text
+        db.execute(text("ALTER TABLE group_displacement_logs ALTER COLUMN room_type_id INT NULL"))
+        db.commit()
+        logger.info("migrated_group_displacement_logs_room_type_id_nullable")
     except Exception:
         db.rollback()
 
