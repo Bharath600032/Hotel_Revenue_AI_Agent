@@ -19,7 +19,7 @@ router = APIRouter(prefix="/hotels", tags=["LOS & Group Displacement AI"])
 
 
 @router.post("/{hotel_id}/group-displacement/evaluate", response_model=GroupDisplacementResponse, status_code=status.HTTP_200_OK)
-async def evaluate_group_displacement(
+def evaluate_group_displacement(
     hotel_id: int,
     payload: GroupDisplacementRequest,
     db: Session = Depends(get_db),
@@ -35,7 +35,7 @@ async def evaluate_group_displacement(
 
 
 @router.get("/{hotel_id}/group-displacement/logs", response_model=List[GroupDisplacementResponse])
-async def get_group_displacement_logs(
+def get_group_displacement_logs(
     hotel_id: int,
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ async def get_group_displacement_logs(
 
 
 @router.get("/{hotel_id}/los-rules", response_model=List[LOSRuleResponse])
-async def get_los_rules(
+def get_los_rules(
     hotel_id: int,
     start_date: Optional[str] = Query(None, description="Start stay date YYYY-MM-DD"),
     days: int = Query(14, ge=1, le=60),
@@ -63,7 +63,7 @@ async def get_los_rules(
 
 
 @router.put("/{hotel_id}/los-rules/{stay_date}", response_model=LOSRuleResponse)
-async def update_los_rule(
+def update_los_rule(
     hotel_id: int,
     stay_date: str,
     payload: LOSRuleUpdate,

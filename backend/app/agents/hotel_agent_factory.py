@@ -28,6 +28,7 @@ class HotelAgentFactory:
 
     def __init__(self):
         self._hotel_agents: Dict[int, SingleAutonomousRevenueAgent] = {}
+        self._initialized_hotels = set()
 
     def get_agent_for_hotel(self, hotel_id: int) -> SingleAutonomousRevenueAgent:
         """Fetch or instantiate dedicated AI Agent for a specific hotel property."""
@@ -40,6 +41,9 @@ class HotelAgentFactory:
         Guarantee that live realistic metrics, reservations, room inventory,
         and competitor rates exist for the specified hotel property.
         """
+        if hotel_id in self._initialized_hotels:
+            return
+
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
         if not hotel or hotel.status != "ACTIVE":
             logger.info("skipping_live_data_seeding_for_inactive_or_missing_hotel", hotel_id=hotel_id)
@@ -478,6 +482,8 @@ class HotelAgentFactory:
                         pass
         except Exception as seed_ev_err:
             logger.warning("ensure_city_events_failed", error=str(seed_ev_err))
+
+        self._initialized_hotels.add(hotel_id)
 
     def provision_new_hotel(self, db: Session, hotel_id: int) -> Dict[str, Any]:
         """

@@ -186,6 +186,29 @@ export interface ForecastItem {
   model_name: string;
 }
 
+export interface CompetitorPriceItem {
+  name: string;
+  rate: number;
+  star_rating?: number;
+}
+
+export interface PriceForecastItem {
+  stay_date: string;
+  day_name?: string;
+  main_hotel_name: string;
+  main_hotel_rate: number;
+  comp_average: number;
+  comp_min: number;
+  comp_max: number;
+  market_diff_pct: number;
+  market_position: string;
+  predicted_demand_rooms?: number;
+  demand_level?: string;
+  recommended_strategy?: string;
+  room_type_name?: string;
+  competitors: CompetitorPriceItem[];
+}
+
 export interface AuditLogItem {
   audit_id: number;
   user_id?: number;

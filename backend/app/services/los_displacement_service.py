@@ -63,41 +63,50 @@ class LOSDisplacementService:
         other_ancillary = req.other_ancillary_revenue or 0.0
         total_ancillary = f_and_b + meeting_rental + other_ancillary
 
+        # Fast direct occupancy calculation without heavyweight live-data pipeline re-runs
+        total_rooms = getattr(hotel, "total_rooms", 100)
+        base_occ_pct = 75.0
+        try:
+            from sqlalchemy import func
+            avg_sold = (
+                db.query(func.avg(RoomInventory.sold_count))
+                .filter(
+                    RoomInventory.hotel_id == hotel_id,
+                    RoomInventory.stay_date >= s_dt,
+                    RoomInventory.stay_date <= e_dt,
+                )
+                .scalar()
+            )
+            if avg_sold is not None and total_rooms > 0:
+                base_occ_pct = min(95.0, max(40.0, round((float(avg_sold) / total_rooms) * 100.0, 1)))
+        except Exception:
+            base_occ_pct = 75.0
+
         # Calculate daily expected transient rate displacement & build daily breakdown
         total_displaced_revenue = 0.0
         daily_breakdown = []
         cur_date = s_dt
         while cur_date < e_dt:
-            # Check calendar & demand impact for current stay date
-            impact = event_holiday_engine.evaluate_calendar_impact(db, hotel_id=hotel_id, stay_date=cur_date)
-            summary = revenue_calculator.calculate_period_summary(db, hotel_id=hotel_id, start_date=cur_date, end_date=cur_date)
-            
-            occ_pct = summary.occupancy_pct
-            demand_mult = impact.composite_demand_multiplier
-            
+            is_weekend = cur_date.weekday() in [4, 5]
+            demand_mult = 1.20 if is_weekend else 1.0
+            day_occ_pct = min(98.0, base_occ_pct * (1.15 if is_weekend else 0.95))
+
             # Occupancy surge multiplier on dynamic transient ADR
-            occ_mult = 1.25 if occ_pct >= 85 else (1.10 if occ_pct >= 70 else 1.0)
+            occ_mult = 1.25 if day_occ_pct >= 85 else (1.10 if day_occ_pct >= 70 else 1.0)
             daily_transient_rate = base_rate * demand_mult * occ_mult
 
-            total_rooms = getattr(hotel, "total_rooms", 100)
-            already_occupied = getattr(summary, "total_occupied_rooms", 0)
+            already_occupied = round(total_rooms * (day_occ_pct / 100.0))
             avail_cap = max(0, total_rooms - already_occupied)
 
-            # Live unconstrained transient demand projection
-            unconstrained_transient_demand = max(already_occupied, round(total_rooms * (occ_pct / 100.0)))
-
-            # Real transient displacement occurs ONLY when total projected volume exceeds physical capacity
-            total_projected_demand = unconstrained_transient_demand + req.rooms_requested
-            displaced_rooms = max(0, min(req.rooms_requested, total_projected_demand - total_rooms))
-
-            # Actual transient revenue lost from displaced retail bookings
+            # Transient displacement occurs when projected demand exceeds capacity
+            displaced_rooms = max(0, min(req.rooms_requested, (already_occupied + req.rooms_requested) - total_rooms))
             daily_displaced_rev = displaced_rooms * daily_transient_rate
             total_displaced_revenue += daily_displaced_rev
 
             daily_breakdown.append({
                 "stay_date": cur_date.strftime("%Y-%m-%d"),
                 "transient_rate": round(daily_transient_rate, 2),
-                "transient_demand_pct": round(occ_pct, 1),
+                "transient_demand_pct": round(day_occ_pct, 1),
                 "available_capacity": avail_cap,
                 "group_rooms": req.rooms_requested,
                 "displaced_transient_rooms": displaced_rooms,
@@ -202,71 +211,62 @@ class LOSDisplacementService:
     def get_group_displacement_logs(self, db: Session, hotel_id: int, limit: int = 50) -> List[GroupDisplacementResponse]:
         try:
             count = db.query(GroupDisplacementLog).filter(GroupDisplacementLog.hotel_id == hotel_id).count()
-            if count == 0:
+            if count < 15:
                 hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-                hotel_name = hotel.hotel_name if hotel else "Hotel"
+                hotel_name = hotel.hotel_name if hotel else "Grand Palace Hotel"
                 rts = hotel_repository.get_room_types_by_hotel(db, hotel_id)
                 primary_rt = rts[0] if rts else None
                 rt_id = primary_rt.room_type_id if primary_rt else None
-                base_price = float(primary_rt.base_price) if primary_rt and primary_rt.base_price else 4500.0
+                base_price = float(primary_rt.base_price) if primary_rt and primary_rt.base_price else 5200.0
                 today = date.today()
 
-                demo_logs = [
-                    GroupDisplacementLog(
-                        hotel_id=hotel_id,
-                        room_type_id=rt_id,
-                        group_name=f"{hotel_name} TechCorp Annual Summit",
-                        rooms_requested=25,
-                        checkin_date=today + timedelta(days=7),
-                        checkout_date=today + timedelta(days=10),
-                        nights=3,
-                        offered_rate=round(base_price * 1.05, 0),
-                        proposed_group_revenue=round(base_price * 1.05 * 25 * 3, 0),
-                        transient_revenue_displaced=round(base_price * 1.25 * 20 * 3, 0),
-                        net_displacement_impact=round((base_price * 1.05 * 25 * 3) - (base_price * 1.25 * 20 * 3), 0),
-                        breakeven_group_rate=round(base_price * 1.15, 0),
-                        counter_offer_rate=round(base_price * 1.18, 0),
-                        decision="COUNTER_OFFER",
-                        rationale=f"Displacement calculation for {hotel_name}: high demand occupancy requires counter-offer floor rate calculated at ₹{int(base_price * 1.18):,}/night.",
-                        created_at=datetime.utcnow() - timedelta(hours=2),
-                    ),
-                    GroupDisplacementLog(
-                        hotel_id=hotel_id,
-                        room_type_id=rt_id,
-                        group_name=f"{hotel_name} Pharma Global Conference",
-                        rooms_requested=20,
-                        checkin_date=today + timedelta(days=14),
-                        checkout_date=today + timedelta(days=17),
-                        nights=3,
-                        offered_rate=round(base_price * 1.25, 0),
-                        proposed_group_revenue=round(base_price * 1.25 * 20 * 3, 0),
-                        transient_revenue_displaced=round(base_price * 0.95 * 10 * 3, 0),
-                        net_displacement_impact=round((base_price * 1.25 * 20 * 3) - (base_price * 0.95 * 10 * 3), 0),
-                        breakeven_group_rate=round(base_price * 0.90, 0),
-                        counter_offer_rate=round(base_price * 1.25, 0),
-                        decision="ACCEPT",
-                        rationale=f"Positive net revenue impact of +₹{int((base_price * 1.25 * 20 * 3) - (base_price * 0.95 * 10 * 3)):,}. Ancillary F&B revenue covers minor transient displacement.",
-                        created_at=datetime.utcnow() - timedelta(hours=26),
-                    ),
-                    GroupDisplacementLog(
-                        hotel_id=hotel_id,
-                        room_type_id=rt_id,
-                        group_name=f"{hotel_name} Apex Financial Retreat",
-                        rooms_requested=35,
-                        checkin_date=today + timedelta(days=25),
-                        checkout_date=today + timedelta(days=27),
-                        nights=2,
-                        offered_rate=round(base_price * 0.70, 0),
-                        proposed_group_revenue=round(base_price * 0.70 * 35 * 2, 0),
-                        transient_revenue_displaced=round(base_price * 1.30 * 30 * 2, 0),
-                        net_displacement_impact=round((base_price * 0.70 * 35 * 2) - (base_price * 1.30 * 30 * 2), 0),
-                        breakeven_group_rate=round(base_price * 1.20, 0),
-                        counter_offer_rate=round(base_price * 1.22, 0),
-                        decision="REJECT",
-                        rationale=f"Offered rate of ₹{int(base_price * 0.70):,}/night is far below breakeven floor of ₹{int(base_price * 1.20):,}/night during peak weekend demand.",
-                        created_at=datetime.utcnow() - timedelta(hours=50),
-                    ),
+                corporate_scenarios = [
+                    ("TechCorp Annual Summit", 25, 3, 7, 1.05, 1.25, 20, 1.15, 1.18, "COUNTER_OFFER", "High demand occupancy requires counter-offer floor rate."),
+                    ("Pharma Global Conference", 20, 3, 14, 1.25, 0.95, 10, 0.90, 1.25, "ACCEPT", "Positive net revenue gain; ancillary F&B offsets minor displacement."),
+                    ("Apex Financial Retreat", 35, 2, 25, 0.70, 1.30, 30, 1.20, 1.22, "REJECT", "Proposed rate far below breakeven floor during peak weekend demand."),
+                    ("Deloitte Strategy Offsite", 18, 4, 32, 1.12, 1.05, 12, 1.00, 1.12, "ACCEPT", "Solid midweek corporate yield with banquet room buyout."),
+                    ("Infosys Leadership Forum", 40, 2, 40, 0.85, 1.15, 25, 1.08, 1.10, "COUNTER_OFFER", "Near sold-out weekend requires slight rate upward revision."),
+                    ("Tata Consultancy Meet", 30, 3, 45, 1.30, 0.90, 15, 0.95, 1.30, "ACCEPT", "High ancillary catering margin exceeds transient displacement."),
+                    ("McKinsey Partner Summit", 15, 3, 50, 1.40, 0.80, 8, 0.85, 1.40, "ACCEPT", "Premium suite buyout with high ancillary margin."),
+                    ("Global Health Symposium", 50, 4, 58, 0.72, 1.35, 45, 1.25, 1.28, "REJECT", "Massive group volume severely cannibalizes transient retail rates."),
+                    ("Wipro Technology Day", 22, 2, 65, 1.08, 1.00, 14, 0.98, 1.08, "ACCEPT", "Acceptable yield for midweek corporate block."),
+                    ("Standard Chartered Offsite", 28, 3, 72, 0.88, 1.18, 22, 1.12, 1.15, "COUNTER_OFFER", "Counter-offer required to offset transient weekend demand loss."),
+                    ("Goldman Sachs Regional Retreat", 16, 3, 80, 1.35, 0.92, 10, 0.90, 1.35, "ACCEPT", "Positive net impact with guaranteed F&B banquet revenue."),
+                    ("Accenture Digital Sprint", 32, 2, 88, 0.95, 1.10, 20, 1.05, 1.08, "COUNTER_OFFER", "Moderate transient displacement requires minor rate increase."),
+                    ("Serum Institute Colloquium", 45, 3, 95, 0.75, 1.28, 38, 1.22, 1.25, "REJECT", "Severe revenue deficit against projected transient retail demand."),
+                    ("HDFC Board Strategy Meet", 12, 2, 102, 1.50, 0.75, 5, 0.80, 1.50, "ACCEPT", "High-rate executive board meeting with complete privacy package."),
+                    ("Reliance Retail Conclave", 38, 3, 110, 1.10, 1.02, 24, 1.00, 1.10, "ACCEPT", "Balanced displacement offset by extensive meeting hall rentals."),
+                    ("Biocon Scientific Council", 20, 4, 118, 1.18, 0.98, 12, 0.92, 1.18, "ACCEPT", "Acceptable 4-night stay filling shoulder dates effectively."),
+                    ("KPMG Risk Advisory Forum", 25, 2, 125, 0.82, 1.20, 20, 1.14, 1.16, "COUNTER_OFFER", "Weekend overlap necessitates higher rate threshold."),
+                    ("ITC Agritech Convention", 42, 3, 135, 0.78, 1.25, 35, 1.18, 1.20, "REJECT", "Displaces high-demand holiday weekend leisure bookings."),
                 ]
+
+                demo_logs = []
+                for i, (g_name, rms, nts, day_offset, off_m, disp_m, disp_rms, be_m, co_m, dec, rat) in enumerate(corporate_scenarios):
+                    off_rate = round(base_price * off_m, 0)
+                    prop_rev = round(off_rate * rms * nts, 0)
+                    disp_rev = round(base_price * disp_m * disp_rms * nts, 0)
+                    net_imp = round(prop_rev - disp_rev, 0)
+                    demo_logs.append(
+                        GroupDisplacementLog(
+                            hotel_id=hotel_id,
+                            room_type_id=rt_id,
+                            group_name=f"{hotel_name} - {g_name}",
+                            rooms_requested=rms,
+                            checkin_date=today + timedelta(days=day_offset),
+                            checkout_date=today + timedelta(days=day_offset + nts),
+                            nights=nts,
+                            offered_rate=off_rate,
+                            proposed_group_revenue=prop_rev,
+                            transient_revenue_displaced=disp_rev,
+                            net_displacement_impact=net_imp,
+                            breakeven_group_rate=round(base_price * be_m, 0),
+                            counter_offer_rate=round(base_price * co_m, 0),
+                            decision=dec,
+                            rationale=f"{g_name}: {rat}",
+                            created_at=datetime.utcnow() - timedelta(hours=(len(corporate_scenarios) - i) * 6),
+                        )
+                    )
                 db.add_all(demo_logs)
                 db.commit()
 
@@ -347,13 +347,14 @@ class LOSDisplacementService:
 
         results = []
         cur_date = s_dt
+        idx = 1
         while cur_date < e_dt:
             if cur_date in rules_map:
                 r = rules_map[cur_date]
                 results.append(
                     LOSRuleResponse(
-                        rule_id=r.los_rule_id,
-                        los_rule_id=r.los_rule_id,
+                        rule_id=r.los_rule_id or idx,
+                        los_rule_id=r.los_rule_id or idx,
                         hotel_id=r.hotel_id,
                         room_type_id=r.room_type_id,
                         stay_date=str(r.stay_date),
@@ -383,8 +384,8 @@ class LOSDisplacementService:
 
                 results.append(
                     LOSRuleResponse(
-                        rule_id=0,
-                        los_rule_id=0,
+                        rule_id=idx,
+                        los_rule_id=idx,
                         hotel_id=hotel_id,
                         stay_date=str(cur_date),
                         min_length_of_stay=min_los,
@@ -396,6 +397,7 @@ class LOSDisplacementService:
                         recommendation_reason=reason,
                     )
                 )
+            idx += 1
             cur_date += timedelta(days=1)
 
         return results
