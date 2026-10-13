@@ -2,9 +2,11 @@
 Concrete implementations of all 22 specialized Hotel Revenue AI Agent tools.
 """
 from datetime import date
+import re
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.tools.base import BaseTool
 from app.repositories.hotel_repository import hotel_repository
@@ -276,35 +278,45 @@ class GetHistoricalRatesTool(BaseTool):
 # --- Tool 10: get_holiday_data ---
 class GetHolidayDataSchema(BaseModel):
     country: str = Field(default="India", description="Country name")
-    start_date: str = Field(..., description="Start date YYYY-MM-DD")
-    end_date: str = Field(..., description="End date YYYY-MM-DD")
+    start_date: Optional[str] = Field(None, description="Start date YYYY-MM-DD")
+    end_date: Optional[str] = Field(None, description="End date YYYY-MM-DD")
+    query: Optional[str] = Field(None, description="Optional holiday search keyword")
 
 class GetHolidayDataTool(BaseTool):
     name = "get_holiday_data"
-    description = "Fetch active holidays and importance ratings for a country and date range."
+    description = "Fetch active holidays and importance ratings for a country and date range or keyword."
     args_schema = GetHolidayDataSchema
 
     def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
-        s_dt = date.fromisoformat(kwargs["start_date"])
-        e_dt = date.fromisoformat(kwargs["end_date"])
         from app.models.events import Holidays
-
-        hols = (
-            db.query(Holidays)
-            .filter(
-                Holidays.country.ilike(f"%{kwargs['country']}%"),
-                Holidays.holiday_date >= s_dt,
-                Holidays.holiday_date <= e_dt,
-            )
-            .all()
-        )
+        query_str = kwargs.get("query")
+        q = db.query(Holidays)
+        if kwargs.get("country"):
+            q = q.filter(Holidays.country.ilike(f"%{kwargs['country']}%"))
+        if kwargs.get("start_date"):
+            try:
+                s_dt = date.fromisoformat(kwargs["start_date"])
+                q = q.filter(Holidays.holiday_date >= s_dt)
+            except Exception:
+                pass
+        if kwargs.get("end_date"):
+            try:
+                e_dt = date.fromisoformat(kwargs["end_date"])
+                q = q.filter(Holidays.holiday_date <= e_dt)
+            except Exception:
+                pass
+        if query_str:
+            q = q.filter(Holidays.holiday_name.ilike(f"%{query_str}%"))
+        hols = q.order_by(Holidays.holiday_date.asc()).all()
         return {
-            "country": kwargs["country"],
+            "country": kwargs.get("country", "India"),
             "holidays": [
                 {
                     "holiday_name": h.holiday_name,
                     "holiday_date": str(h.holiday_date),
                     "importance": h.importance,
+                    "impact_factor": h.impact_factor,
+                    "region": h.region,
                 }
                 for h in hols
             ],
@@ -314,8 +326,9 @@ class GetHolidayDataTool(BaseTool):
 # --- Tool 11: get_event_data ---
 class GetEventDataSchema(BaseModel):
     city: Optional[str] = Field(None, description="City name")
-    start_date: str = Field(..., description="Start date YYYY-MM-DD")
-    end_date: str = Field(..., description="End date YYYY-MM-DD")
+    start_date: Optional[str] = Field(None, description="Start date YYYY-MM-DD")
+    end_date: Optional[str] = Field(None, description="End date YYYY-MM-DD")
+    query: Optional[str] = Field(None, description="Optional event search keyword")
 
 class GetEventDataTool(BaseTool):
     name = "get_event_data"
@@ -323,8 +336,6 @@ class GetEventDataTool(BaseTool):
     args_schema = GetEventDataSchema
 
     def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
-        s_dt = date.fromisoformat(kwargs["start_date"])
-        e_dt = date.fromisoformat(kwargs["end_date"])
         from app.models.events import Events
 
         target_city = kwargs.get("city")
@@ -334,15 +345,27 @@ class GetEventDataTool(BaseTool):
                 target_city = h.city
         target_city = target_city or "Chennai"
 
-        evs = (
-            db.query(Events)
-            .filter(
-                Events.city.ilike(f"%{target_city}%"),
-                Events.end_date >= s_dt,
-                Events.start_date <= e_dt,
+        q = db.query(Events).filter(Events.city.ilike(f"%{target_city}%"))
+        if kwargs.get("start_date"):
+            try:
+                s_dt = date.fromisoformat(kwargs["start_date"])
+                q = q.filter(Events.end_date >= s_dt)
+            except Exception:
+                pass
+        if kwargs.get("end_date"):
+            try:
+                e_dt = date.fromisoformat(kwargs["end_date"])
+                q = q.filter(Events.start_date <= e_dt)
+            except Exception:
+                pass
+        if kwargs.get("query"):
+            q = q.filter(
+                or_(
+                    Events.event_name.ilike(f"%{kwargs['query']}%"),
+                    Events.venue.ilike(f"%{kwargs['query']}%"),
+                )
             )
-            .all()
-        )
+        evs = q.order_by(Events.start_date.asc()).all()
         return {
             "city": target_city,
             "events": [
@@ -352,10 +375,169 @@ class GetEventDataTool(BaseTool):
                     "start_date": str(e.start_date),
                     "end_date": str(e.end_date),
                     "expected_attendance": e.expected_attendance,
+                    "venue": e.venue,
                     "importance": e.importance,
+                    "impact_factor": e.impact_factor,
                 }
                 for e in evs
             ],
+        }
+
+
+# --- Tool 11B: get_events_holidays ---
+class GetEventsHolidaysSchema(BaseModel):
+    query: Optional[str] = Field(None, description="Event or festival or holiday name search keyword (e.g. Navratri, Golu, Diwali, Tech Summit)")
+    city: Optional[str] = Field(None, description="City name (e.g. Chennai, Goa, Mumbai, Bengaluru)")
+    start_date: Optional[str] = Field(None, description="Start date YYYY-MM-DD")
+    end_date: Optional[str] = Field(None, description="End date YYYY-MM-DD")
+    hotel_id: Optional[int] = Field(None, description="Target hotel ID to infer city")
+
+class GetEventsHolidaysTool(BaseTool):
+    name = "get_events_holidays"
+    description = "Fetch live events, festivals, conferences, national holidays, and regional observances from live database and RAG."
+    args_schema = GetEventsHolidaysSchema
+
+    def execute(self, db: Session, **kwargs) -> Dict[str, Any]:
+        from app.models.events import Events, Holidays
+        from app.rag.vector_store import vector_store_manager
+
+        search_query = (kwargs.get("query") or "").strip()
+        target_city = kwargs.get("city")
+        hotel_id = kwargs.get("hotel_id")
+        
+        if not target_city and hotel_id:
+            h = hotel_repository.get_by_id(db, hotel_id)
+            if h:
+                target_city = h.city
+        target_city = target_city or "Chennai"
+
+        # 1. Parse keywords from query
+        stop_words = {
+            "what", "date", "is", "when", "the", "for", "in", "at", "tell", "me", "about",
+            "a", "an", "on", "of", "to", "are", "upcoming", "happening", "event", "events",
+            "holiday", "holidays", "show", "list", "which", "give", "please", "can", "you",
+            "dates", "time", "day", "days"
+        }
+        raw_tokens = [w.strip() for w in re.findall(r'[a-zA-Z0-9]+', search_query)]
+        keywords = [w for w in raw_tokens if w.lower() not in stop_words and len(w) >= 3]
+
+        matched_events = []
+        matched_holidays = []
+
+        # 2. Search Events table by keyword
+        if keywords:
+            for kw in keywords:
+                evs = db.query(Events).filter(
+                    or_(
+                        Events.event_name.ilike(f"%{kw}%"),
+                        Events.venue.ilike(f"%{kw}%"),
+                        Events.event_type.ilike(f"%{kw}%")
+                    )
+                ).all()
+                for e in evs:
+                    if not any(me["event_id"] == e.event_id for me in matched_events):
+                        matched_events.append({
+                            "event_id": e.event_id,
+                            "event_name": e.event_name,
+                            "city": e.city,
+                            "event_type": e.event_type,
+                            "start_date": str(e.start_date),
+                            "end_date": str(e.end_date),
+                            "expected_attendance": e.expected_attendance,
+                            "venue": e.venue,
+                            "importance": e.importance,
+                            "impact_factor": e.impact_factor,
+                            "source": e.source,
+                        })
+
+        # 3. Search Holidays table by keyword
+        if keywords:
+            for kw in keywords:
+                hols = db.query(Holidays).filter(
+                    or_(
+                        Holidays.holiday_name.ilike(f"%{kw}%"),
+                        Holidays.region.ilike(f"%{kw}%")
+                    )
+                ).all()
+                for h in hols:
+                    if not any(mh["holiday_id"] == h.holiday_id for mh in matched_holidays):
+                        matched_holidays.append({
+                            "holiday_id": h.holiday_id,
+                            "holiday_name": h.holiday_name,
+                            "holiday_date": str(h.holiday_date),
+                            "country": h.country,
+                            "region": h.region,
+                            "holiday_type": h.holiday_type,
+                            "importance": h.importance,
+                            "impact_factor": h.impact_factor,
+                        })
+
+        # 4. Fetch upcoming city events
+        today = date.today()
+        upcoming_evs = (
+            db.query(Events)
+            .filter(
+                Events.city.ilike(f"%{target_city}%"),
+                Events.end_date >= today
+            )
+            .order_by(Events.start_date.asc())
+            .limit(6)
+            .all()
+        )
+        upcoming_events_list = [
+            {
+                "event_id": e.event_id,
+                "event_name": e.event_name,
+                "city": e.city,
+                "event_type": e.event_type,
+                "start_date": str(e.start_date),
+                "end_date": str(e.end_date),
+                "expected_attendance": e.expected_attendance,
+                "venue": e.venue,
+                "importance": e.importance,
+                "impact_factor": e.impact_factor,
+            }
+            for e in upcoming_evs
+        ]
+
+        # 5. Fetch upcoming holidays
+        upcoming_hols = (
+            db.query(Holidays)
+            .filter(Holidays.holiday_date >= today)
+            .order_by(Holidays.holiday_date.asc())
+            .limit(6)
+            .all()
+        )
+        upcoming_holidays_list = [
+            {
+                "holiday_id": h.holiday_id,
+                "holiday_name": h.holiday_name,
+                "holiday_date": str(h.holiday_date),
+                "country": h.country,
+                "region": h.region,
+                "holiday_type": h.holiday_type,
+                "importance": h.importance,
+                "impact_factor": h.impact_factor,
+            }
+            for h in upcoming_hols
+        ]
+
+        # 6. RAG similarity search for relevant knowledge
+        rag_hits = []
+        try:
+            rag_docs = vector_store_manager.search_similar(search_query or f"events festivals in {target_city}", hotel_id=hotel_id, top_k=3)
+            rag_hits = [{"title": d.title, "chunk": d.chunk} for d in rag_docs]
+        except Exception:
+            pass
+
+        return {
+            "query": search_query,
+            "city": target_city,
+            "matched_events": matched_events,
+            "matched_holidays": matched_holidays,
+            "upcoming_events": upcoming_events_list,
+            "upcoming_holidays": upcoming_holidays_list,
+            "rag_docs": rag_hits,
         }
 
 

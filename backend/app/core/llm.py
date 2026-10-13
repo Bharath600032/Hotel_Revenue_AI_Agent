@@ -83,36 +83,32 @@ class MockLLMProvider(LLMProviderInterface):
         msg_lower = user_message.lower()
         extracted_date = parse_date_from_text(user_message)
 
-        # Intent 1: Pricing & Rate Recommendation / Fix Price Query
-        if any(w in msg_lower for w in ["rate", "price", "charge", "cost", "tariff", "recommend", "how much", "fix", "optimi"]):
+        # Intent 1: Events, Festivals, Holidays & Dates Query (High Priority)
+        if any(w in msg_lower for w in [
+            "event", "events", "holiday", "holidays", "festival", "festivals",
+            "summit", "conference", "diwali", "navratri", "golu", "pongal", "calendar",
+            "weather", "rain", "temp", "expo", "exhibition", "carnival", "concert"
+        ]) or any(k in msg_lower for k in ["what date", "when is", "dates of", "dates for", "date is"]):
             return {
-                "thought": f"Calculating pricing recommendation for stay date {extracted_date}.",
+                "thought": f"Fetching local events and holiday dates for query: '{user_message}'.",
                 "tool_calls": [
                     {
-                        "tool_name": "calculate_pricing_recommendation",
+                        "tool_name": "get_events_holidays",
                         "arguments": {
-                            "stay_date": extracted_date,
+                            "query": user_message,
+                            "start_date": extracted_date,
+                            "end_date": extracted_date,
                         },
                     }
                 ],
                 "content": None,
             }
 
-        # Intent 2: Room Types / Categories / Inventory Query
-        elif any(w in msg_lower for w in ["room", "suite", "inventory", "category", "types", "accommodation", "bed", "baseline rate"]):
-            return {
-                "thought": "Fetching room categories, base prices, and master inventory allocations.",
-                "tool_calls": [
-                    {
-                        "tool_name": "get_room_types",
-                        "arguments": {},
-                    }
-                ],
-                "content": None,
-            }
-
-        # Intent 3: Hotel Profile / Overview / Total Rooms Query
-        elif any(w in msg_lower for w in ["hotel", "property", "location", "city", "star", "details", "about", "where", "total room", "capacity"]):
+        # Intent 2: Total Rooms / Hotel Capacity Query
+        elif any(w in msg_lower for w in [
+            "total room", "total rooms", "how many room", "how many rooms",
+            "hotel capacity", "room capacity", "property capacity", "number of room", "number of rooms"
+        ]):
             return {
                 "thought": "Fetching property profile and total room capacity.",
                 "tool_calls": [
@@ -124,8 +120,38 @@ class MockLLMProvider(LLMProviderInterface):
                 "content": None,
             }
 
-        # Intent 4: Demand Forecast & Occupancy Query
-        elif any(w in msg_lower for w in ["forecast", "demand", "occupancy", "pace", "pickup", "projection", "predict"]):
+        # Intent 3: Room Types / Categories / Inventory / Baseline Rate Query
+        elif any(w in msg_lower for w in [
+            "room type", "room types", "room category", "room categories",
+            "room name", "room names", "inventory", "suite", "suites",
+            "baseline rate", "baseline rates", "base rate", "base rates"
+        ]):
+            return {
+                "thought": "Fetching room categories, base prices, and master inventory allocations.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_room_types",
+                        "arguments": {},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 4: Competitor Benchmark Query
+        elif any(w in msg_lower for w in ["competitor", "market median", "comp set", "rival", "benchmark", "parity", "rate gap", "price gap"]):
+            return {
+                "thought": "Analyzing competitor market rates and price positioning gap.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_competitor_rates",
+                        "arguments": {"stay_date": extracted_date},
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 5: Demand Forecast & Occupancy Query
+        elif any(w in msg_lower for w in ["forecast", "occupancy", "pickup", "pace", "projection", "predict demand"]):
             return {
                 "thought": "Running demand forecasting model pipeline.",
                 "tool_calls": [
@@ -140,27 +166,16 @@ class MockLLMProvider(LLMProviderInterface):
                 "content": None,
             }
 
-        # Intent 5: Competitor Query
-        elif any(w in msg_lower for w in ["competitor", "market", "comp", "rival", "benchmark", "parity", "gap"]):
+        # Intent 6: Pricing & Rate Recommendation / Fix Price Query
+        elif any(w in msg_lower for w in ["rate", "price", "charge", "cost", "tariff", "recommend", "how much", "fix", "optimi"]):
             return {
-                "thought": "Analyzing competitor market rates and price positioning gap.",
+                "thought": f"Calculating pricing recommendation for stay date {extracted_date}.",
                 "tool_calls": [
                     {
-                        "tool_name": "get_competitor_rates",
-                        "arguments": {"stay_date": extracted_date},
-                    }
-                ],
-                "content": None,
-            }
-
-        # Intent 6: Events, Holidays & Weather Query
-        elif any(w in msg_lower for w in ["event", "holiday", "festival", "summit", "conference", "diwali", "calendar", "weather", "rain", "temp"]):
-            return {
-                "thought": "Fetching local events, holiday demand multipliers, and weather outlook.",
-                "tool_calls": [
-                    {
-                        "tool_name": "get_events_holidays",
-                        "arguments": {"start_date": extracted_date, "end_date": extracted_date},
+                        "tool_name": "calculate_pricing_recommendation",
+                        "arguments": {
+                            "stay_date": extracted_date,
+                        },
                     }
                 ],
                 "content": None,
@@ -221,6 +236,19 @@ class MockLLMProvider(LLMProviderInterface):
                             "start_date": extracted_date,
                             "end_date": extracted_date,
                         },
+                    }
+                ],
+                "content": None,
+            }
+
+        # Intent 11: Hotel Profile / Overview / Amenities Query
+        elif any(w in msg_lower for w in ["hotel profile", "property profile", "property details", "hotel overview", "amenity", "amenities", "about hotel"]):
+            return {
+                "thought": "Fetching property profile and amenities.",
+                "tool_calls": [
+                    {
+                        "tool_name": "get_hotel_profile",
+                        "arguments": {},
                     }
                 ],
                 "content": None,

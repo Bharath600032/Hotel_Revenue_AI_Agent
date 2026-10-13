@@ -19,26 +19,55 @@ from app.core.logging import get_logger
 logger = get_logger("app.agents.orchestrator")
 
 
-def format_chunk_as_bullet_points(title_str: str, chunk_text: str) -> str:
-    """Format raw chunk text into clean, structured bullet points while stripping testimonials/footers."""
-    lines = [l.strip() for l in chunk_text.split('\n') if l.strip()]
-    bullets = []
-    junk_keywords = ["testimonial", "what clients says", "arun kumar", "priya nair", "copyright", "rights reserved", "designed by"]
+def extract_crisp_rag_answer(query: str, docs: List[Any], hotel_name: str) -> str:
+    """Extract short, crisp, relevant answer sentences directly answering user query from RAG docs."""
+    q_words = set(re.findall(r'\w+', query.lower())) - {
+        "what", "is", "the", "are", "do", "you", "have", "in", "for", "to",
+        "of", "and", "a", "an", "hotel", "can", "tell", "me", "about", "give", "some"
+    }
 
-    for l in lines:
-        l_lower = l.lower()
-        if any(jk in l_lower for jk in junk_keywords) or l.startswith("Official Hotel Website") or l.startswith("Hotel Website Page"):
-            continue
-        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', l) if len(s.strip()) > 4]
-        for s in sentences:
-            if any(jk in s.lower() for jk in junk_keywords):
+    junk_keywords = [
+        "testimonial", "what clients says", "arun kumar", "priya nair", "copyright",
+        "rights reserved", "designed by", "official hotel website", "all rights",
+        "sublink", "website page"
+    ]
+
+    scored_sentences = []
+
+    for doc in docs:
+        chunk = getattr(doc, 'chunk', '') if hasattr(doc, 'chunk') else (doc.get('chunk', '') if isinstance(doc, dict) else str(doc))
+        lines = [l.strip() for l in chunk.split('\n') if l.strip()]
+        for line in lines:
+            if any(jk in line.lower() for jk in junk_keywords):
                 continue
-            if not s.startswith('•') and not s.startswith('📌'):
-                bullets.append(f"• {s}")
-            else:
-                bullets.append(s)
-    body = "\n".join(bullets[:5]) if bullets else ""
-    return f"📌 **{title_str}**:\n{body}" if body else ""
+            sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', line) if len(s.strip()) > 8]
+            for s in sentences:
+                s_lower = s.lower()
+                if any(jk in s_lower for jk in junk_keywords):
+                    continue
+                score = sum(1 for w in q_words if w in s_lower)
+                if any(w in s_lower for w in ["check-in", "check-out", "pool", "restaurant", "dining", "wifi", "contact", "address", "phone", "located", "room"]):
+                    score += 1
+                scored_sentences.append((score, s))
+
+    if not scored_sentences:
+        return f"**{hotel_name}** provides premium accommodations and guest services in Chennai."
+
+    scored_sentences.sort(key=lambda x: x[0], reverse=True)
+
+    chosen = []
+    seen = set()
+    for sc, s in scored_sentences:
+        clean = s.lstrip("•-*# ").strip()
+        if clean.lower() not in seen and (sc > 0 or len(chosen) == 0):
+            seen.add(clean.lower())
+            chosen.append(clean)
+            if len(chosen) >= 2:
+                break
+
+    if chosen:
+        return f"**{hotel_name}**: " + " ".join(chosen)
+    return f"**{hotel_name}** provides full-service hospitality and accommodations."
 
 
 class SingleAutonomousRevenueAgent:
@@ -81,6 +110,14 @@ class SingleAutonomousRevenueAgent:
         combined_system_prompt = f"{REVENUE_AGENT_SYSTEM_PROMPT}\n\n{memory_context}"
 
         logger.info("agent_run_started", agent_run_id=agent_run_id, user_id=user_id, request=user_message)
+
+        # Guarantee live metrics, events, and holidays for target hotel
+        target_hotel_id = hotel_id or 1
+        try:
+            from app.agents.hotel_agent_factory import hotel_agent_factory
+            hotel_agent_factory.ensure_hotel_live_data(db, target_hotel_id)
+        except Exception as fac_err:
+            logger.warning("ensure_live_data_failed", error=str(fac_err))
 
         provider = get_llm_provider()
         tools_decl = tool_registry.get_llm_tool_declarations()
@@ -128,159 +165,147 @@ class SingleAutonomousRevenueAgent:
         hotel_name = hotel_obj.hotel_name if hotel_obj else f"Hotel Property {target_hotel_id}"
 
         user_lower = user_message.lower()
-        is_capacity_query = any(k in user_lower for k in ["total room", "total rooms", "how many room", "how many rooms", "hotel capacity", "property profile", "property details", "number of rooms", "hotel profile"])
-        is_website_query = any(k in user_lower for k in ["website", "site", "detail", "details", "info", "information", "amenity", "amenities", "dining", "location", "policy", "offer", "offers", "contact", "link", "links"])
-        is_room_query = "get_room_types" in tool_results or any(k in user_lower for k in ["room type", "room types", "room category", "room categories", "suite", "suites", "skyline"])
+        is_events_query = (
+            "get_events_holidays" in tool_results
+            or "get_event_data" in tool_results
+            or "get_holiday_data" in tool_results
+            or any(k in user_lower for k in [
+                "event", "events", "holiday", "holidays", "festival", "festivals",
+                "navratri", "golu", "diwali", "pongal", "summit", "conference",
+                "what date", "when is", "calendar", "expo", "carnival"
+            ])
+        )
+        is_capacity_query = any(k in user_lower for k in [
+            "total room", "total rooms", "how many room", "how many rooms",
+            "hotel capacity", "room capacity", "property capacity", "number of room", "number of rooms"
+        ])
+        is_room_query = "get_room_types" in tool_results or any(k in user_lower for k in [
+            "room type", "room types", "room category", "room categories",
+            "room name", "room names", "inventory", "suite", "suites",
+            "baseline rate", "baseline rates", "base rate", "base rates"
+        ])
+        is_pricing_query = any(k in user_lower for k in [
+            "price", "rate", "cost", "tariff", "fix", "recommend", "charge", "pricing", "how much", "dynamic rate"
+        ])
+        is_competitor_query = "get_competitor_rates" in tool_results or any(k in user_lower for k in [
+            "competitor", "market median", "comp set", "rival", "rate gap", "price gap", "parity"
+        ])
+        is_forecast_query = "run_demand_forecast" in tool_results or any(k in user_lower for k in [
+            "forecast", "occupancy projection", "predicted occupancy", "pace", "pickup"
+        ])
+        is_revpar_query = "calculate_revpar" in tool_results or "calculate_adr" in tool_results or any(k in user_lower for k in [
+            "revpar", "adr", "metrics", "financial summary", "revenue performance"
+        ])
 
-        # Query RAG Knowledge Base for any scraped website documents matching target hotel
-        hotel_rag_docs = vector_store_manager.search_similar(user_message, hotel_id=target_hotel_id, top_k=5)
-        all_hotel_chunks = vector_store_manager.get_hotel_documents(target_hotel_id)
-        website_rag_chunks = [
-            d for d in all_hotel_chunks 
-            if d.get("category") in ["Hotel Website", "Hotel Website Sublink"] or "Website" in d.get("title", "")
-        ]
+        # Priority 1: Events & Festivals
+        if is_events_query:
+            res_ev = tool_results.get("get_events_holidays") or {}
+            if not res_ev:
+                from app.tools.revenue_tools import GetEventsHolidaysTool
+                res_ev = GetEventsHolidaysTool().execute(db, query=user_message, hotel_id=target_hotel_id)
 
-        if is_capacity_query or "get_hotel_profile" in tool_results:
+            matched_evs = res_ev.get("matched_events", [])
+            matched_hols = res_ev.get("matched_holidays", [])
+            city_name = res_ev.get("city") or (hotel_obj.city if hotel_obj else "Chennai")
+
+            if matched_evs:
+                ev_lines = []
+                for ev in matched_evs:
+                    v_str = f" (Venue: {ev['venue']})" if ev.get('venue') else ""
+                    ev_lines.append(f"**{ev['event_name']} ({ev.get('city', city_name)})** is scheduled from **{ev['start_date']} to {ev['end_date']}**{v_str}.")
+                answer_content = "\n\n".join(ev_lines)
+            elif matched_hols:
+                hol_lines = []
+                for hol in matched_hols:
+                    reg_str = f" ({hol.get('region')})" if hol.get('region') else ""
+                    hol_lines.append(f"**{hol['holiday_name']}**{reg_str} is on **{hol['holiday_date']}**.")
+                answer_content = "\n\n".join(hol_lines)
+            else:
+                up_evs = res_ev.get("upcoming_events", [])
+                up_hols = res_ev.get("upcoming_holidays", [])
+                lines = []
+                if up_evs:
+                    lines.append(f"**Upcoming Events in {city_name}:**")
+                    for ev in up_evs[:3]:
+                        lines.append(f"• **{ev['event_name']}**: {ev['start_date']} – {ev['end_date']}")
+                if up_hols:
+                    lines.append(f"**Upcoming Holidays:**")
+                    for hol in up_hols[:3]:
+                        lines.append(f"• **{hol['holiday_name']}**: {hol['holiday_date']}")
+                answer_content = "\n".join(lines) if lines else f"No upcoming events registered for {city_name}."
+
+        # Priority 2: Total Rooms / Hotel Capacity
+        elif is_capacity_query or ("get_hotel_profile" in tool_results and not is_pricing_query):
             res = tool_results.get("get_hotel_profile", {})
             t_rooms = res.get("total_rooms") or (hotel_obj.total_rooms if hotel_obj else 50)
             c_name = res.get("city") or (hotel_obj.city if hotel_obj else "Chennai")
-            h_code = res.get("hotel_code") or (hotel_obj.hotel_code if hotel_obj else "HTL")
-            
-            answer_content = (
-                f"**Property Overview — {hotel_name}**\n\n"
-                f"• **Total Room Capacity**: **{t_rooms} Rooms**\n"
-                f"• **Location**: {c_name}, {hotel_obj.country if hotel_obj else 'India'}\n"
-                f"• **Property Code**: `{h_code}`\n"
-                f"• **Currency**: {hotel_obj.currency if hotel_obj else 'INR'}\n"
-                f"• **Autonomous Rate Guardrails**: Min Floor ₹{getattr(hotel_obj, 'min_price_floor', 3000):,.0f} | Max Ceiling ₹{getattr(hotel_obj, 'max_price_ceiling', 25000):,.0f}"
-            )
+            answer_content = f"**{hotel_name}** ({c_name}) has a total capacity of **{t_rooms} Rooms**."
 
-        elif (is_room_query or is_website_query) and (hotel_rag_docs or website_rag_chunks):
-            # Prioritize RAG Knowledge Base scraped website details formatted in bullet points
-            answer_content = f"Here are the official property details retrieved from the website RAG Knowledge Base for **{hotel_name}**:\n\n"
-            
-            seen_chunks = set()
-            rag_output_blocks = []
-            
-            for doc in (hotel_rag_docs + [
-                type('Doc', (), {'title': d['title'], 'chunk': d['chunk']})() for d in website_rag_chunks[:3]
-            ]):
-                chunk_text = getattr(doc, 'chunk', '')
-                title_text = getattr(doc, 'title', '')
-                if chunk_text and chunk_text not in seen_chunks:
-                    seen_chunks.add(chunk_text)
-                    formatted_block = format_chunk_as_bullet_points(title_text, chunk_text)
-                    if formatted_block:
-                        rag_output_blocks.append(formatted_block)
-
-            if rag_output_blocks:
-                answer_content += "\n\n".join(rag_output_blocks[:3])
-            else:
-                answer_content += f"• **Total Capacity**: **{hotel_obj.total_rooms if hotel_obj else 50} Rooms**\n• **Location**: {hotel_obj.city if hotel_obj else 'Chennai'}"
-            
-            # Append system inventory table if room query
-            if is_room_query:
-                rts = hotel_repository.get_room_types_by_hotel(db, target_hotel_id)
-                if rts:
-                    answer_content += f"\n\n**System Room Inventory & Pricing:**\n"
-                    for rt in rts:
-                        answer_content += f"• **{rt.room_type_name}** (`{rt.room_type_code}`): **{rt.total_inventory} Units** | Max Occupancy: {rt.max_occupancy} Guests | Rate: **₹{rt.base_price:,.0f}**\n"
-
-                answer_content += f"\nTotal Capacity: **{hotel_obj.total_rooms if hotel_obj else 50} Rooms**."
-
-        elif "get_room_types" in tool_results:
+        # Priority 3: Room Categories / Inventory / Baseline Rates
+        elif is_room_query:
             rts = hotel_repository.get_room_types_by_hotel(db, target_hotel_id)
             if rts:
-                answer_content = f"Here are the active room categories and inventory for **{hotel_name}** ({hotel_obj.city if hotel_obj else 'Chennai'}):\n\n"
-                for rt in rts:
-                    answer_content += f"• **{rt.room_type_name}** (`{rt.room_type_code}`): **{rt.total_inventory} Units** | Max Occupancy: {rt.max_occupancy} Guests | Baseline Rate: **₹{rt.base_price:,.0f}**\n"
-                answer_content += f"\nTotal Capacity: **{hotel_obj.total_rooms if hotel_obj else 50} Rooms**."
+                lines = [f"• **{rt.room_type_name}**: {rt.total_inventory} Units (₹{rt.base_price:,.0f}/night)" for rt in rts]
+                answer_content = f"**Room Categories for {hotel_name}:**\n" + "\n".join(lines)
             else:
-                answer_content = f"Active room types for **{hotel_name}**:\n• **Superior Room**: 20 Units (₹4,500/night)\n• **Deluxe Suite**: 15 Units (₹7,500/night)\n• **Executive Suite**: 10 Units (₹12,000/night)."
+                answer_content = f"**{hotel_name}** has standard room inventory configured."
 
-        elif "get_hotel_profile" in tool_results:
-            res = tool_results["get_hotel_profile"]
+        # Priority 4: Competitor Rates Benchmark
+        elif is_competitor_query:
+            res = tool_results.get("get_competitor_rates", {})
+            my_rate = res.get('my_rate', 6500)
+            comp_med = res.get('competitor_median', 6200)
             answer_content = (
-                f"**Property Profile — {res.get('hotel_name', hotel_name)}**\n\n"
-                f"• **Property Code**: `{res.get('hotel_code', 'HTL')}`\n"
-                f"• **Location**: {res.get('city', 'Chennai')}, {res.get('country', 'India')}\n"
-                f"• **Total Room Capacity**: {res.get('total_rooms', 50)} Rooms\n"
-                f"• **Currency**: {res.get('currency', 'INR')}\n"
-                f"• **Autonomous Rate Guardrails**: Min Floor ₹{getattr(hotel_obj, 'min_price_floor', 3000):,.0f} | Max Ceiling ₹{getattr(hotel_obj, 'max_price_ceiling', 25000):,.0f}"
+                f"**Competitor Rates ({hotel_name}):**\n"
+                f"• **Our Active Rate**: ₹{my_rate:,.0f} | **Market Median**: ₹{comp_med:,.0f}"
             )
 
-        elif "get_events_holidays" in tool_results or "event" in user_message.lower() or "holiday" in user_message.lower():
+        # Priority 5: Demand Forecast
+        elif is_forecast_query:
+            res = tool_results.get("run_demand_forecast", {})
+            proj_occ = res.get('projected_occupancy_pct') or res.get('occupancy') or 84.5
+            tgt_revpar = res.get('target_revpar') or res.get('revpar') or 5250
             answer_content = (
-                f"**Upcoming High-Impact Local Events & Holidays ({hotel_obj.city if hotel_obj else 'Chennai'})**\n\n"
-                f"• 🎪 **Chennai International Tech Summit**: Oct 18 – Oct 22 (+25% Projected Demand Uplift)\n"
-                f"• 🪔 **Diwali Festive Holiday Period**: Nov 01 – Nov 05 (+35% Projected Demand Uplift)\n"
-                f"• 🎵 **Margazhi Music & Cultural Festival**: Dec 15 – Jan 05 (+20% Projected Demand Uplift)\n\n"
-                f"Yield management guardrails are actively monitoring these dates for rate optimization."
+                f"**Demand Forecast ({hotel_name}):**\n"
+                f"• **Projected Occupancy**: **{proj_occ:.1f}%** | **Target RevPAR**: **₹{tgt_revpar:,.0f}**"
             )
 
-        elif "get_competitor_rates" in tool_results:
-            res = tool_results["get_competitor_rates"]
-            answer_content = (
-                f"**Competitor Market Rate Benchmark — {hotel_name}**\n\n"
-                f"• **Our Active Rate**: ₹{res.get('my_rate', 6500):,.0f}\n"
-                f"• **Market Median Rate**: ₹{res.get('competitor_median', 6200):,.0f}\n"
-                f"• **Positioning Index**: Slightly above market median (+4.8% premium)\n"
-                f"• **Tracked Competitors**: Taj Coromandel, The Park Chennai, Radisson Blu, ITC Grand Chola"
-            )
-
-        elif "run_demand_forecast" in tool_results:
-            res = tool_results["run_demand_forecast"]
-            answer_content = (
-                f"**Demand Forecast & Occupancy Pace — {hotel_name}**\n\n"
-                f"• **7-Day Projected Occupancy**: 84.5%\n"
-                f"• **Peak Occupancy Date**: Oct 22 (94.0% Projected)\n"
-                f"• **Target RevPAR**: ₹5,250\n"
-                f"• **Booking Velocity**: Fast Pace (+14 Rooms in last 72h)"
-            )
-
-        elif final_recommendation:
+        # Priority 6: Dynamic Pricing Recommendation
+        elif final_recommendation and is_pricing_query:
             rec_rate = final_recommendation.get('recommended_rate') or final_recommendation.get('proposed_rate') or 4500.0
             curr_rate = final_recommendation.get('current_rate') or final_recommendation.get('base_rate') or 4000.0
             stay_dt = final_recommendation.get('stay_date') or "target stay date"
-            occ = final_recommendation.get('occupancy') or final_recommendation.get('occupancy_pct') or 78.5
-            comp_med = final_recommendation.get('competitor_median') or 4800.0
-            conf = int((final_recommendation.get('confidence_score') or 0.88) * 100)
-            reason = final_recommendation.get('price_reason') or "Multi-signal demand, competitor parity, and local event impact."
-            
             answer_content = (
-                f"**Dynamic Rate Recommendation — {hotel_name}**\n\n"
-                f"• **Target Stay Date**: `{stay_dt}`\n"
-                f"• **Recommended Dynamic Rate**: **₹{rec_rate:,.0f}** (Baseline: ₹{curr_rate:,.0f})\n"
-                f"• **Projected Occupancy**: **{occ:.1f}%**\n"
-                f"• **Competitor Market Median**: ₹{comp_med:,.0f}\n"
-                f"• **AI Model Confidence Score**: **{conf}%**\n"
-                f"• **Contributing Revenue Signals**: {reason}\n\n"
-                f"{'⚠️ *Requires Revenue Manager approval as rate change exceeds daily guardrail threshold.*' if requires_approval else '✅ *Within automated guardrail boundaries — ready for PMS publishing.*'}"
+                f"**Recommended Rate for `{stay_dt}` ({hotel_name}):**\n"
+                f"• **Dynamic Rate**: **₹{rec_rate:,.0f}** (Base: ₹{curr_rate:,.0f})\n"
+                f"• **Status**: {'⚠️ Requires approval' if requires_approval else '✅ Within guardrails'}"
             )
-        elif "calculate_revpar" in tool_results or "calculate_adr" in tool_results:
+
+        # Priority 7: RevPAR / ADR Revenue Metrics
+        elif is_revpar_query:
             res_rev = tool_results.get("calculate_revpar") or tool_results.get("calculate_adr") or {}
             revpar_val = res_rev.get("revpar") or 3850.0
             adr_val = res_rev.get("adr") or 4950.0
             occ_val = res_rev.get("occupancy_pct") or 77.8
             answer_content = (
-                f"**Financial Revenue & Yield Performance — {hotel_name}**\n\n"
-                f"• **RevPAR (Revenue Per Available Room)**: **₹{revpar_val:,.0f}**\n"
-                f"• **ADR (Average Daily Rate)**: **₹{adr_val:,.0f}**\n"
-                f"• **Occupancy Rate**: **{occ_val:.1f}%**\n"
-                f"• **Revenue Strategy Status**: Yield optimization guardrails actively maintaining rate parity."
+                f"**Performance Metrics ({hotel_name}):**\n"
+                f"• **RevPAR**: **₹{revpar_val:,.0f}** | **ADR**: **₹{adr_val:,.0f}** | **Occupancy**: **{occ_val:.1f}%**"
             )
+
+        # Priority 8: RAG Knowledge Base Scraped Website / Strategy Documents
         else:
-            # Semantic RAG Search Over Documents & Scraped Website Content
-            rag_docs = vector_store_manager.search_similar(user_message, hotel_id=target_hotel_id, top_k=3)
-            if rag_docs:
-                answer_content = f"Based on strategy knowledge base & official website for **{hotel_name}**:\n\n"
-                for doc in rag_docs:
-                    answer_content += format_chunk_as_bullet_points(doc.title, doc.chunk) + "\n\n"
+            hotel_rag_docs = vector_store_manager.search_similar(user_message, hotel_id=target_hotel_id, top_k=3)
+            all_hotel_chunks = vector_store_manager.get_hotel_documents(target_hotel_id)
+            website_rag_chunks = [
+                d for d in all_hotel_chunks
+                if d.get("category") in ["Hotel Website", "Hotel Website Sublink"] or "Website" in d.get("title", "")
+            ]
+            candidate_docs = hotel_rag_docs or website_rag_chunks
+            if candidate_docs:
+                answer_content = extract_crisp_rag_answer(user_message, candidate_docs, hotel_name)
             else:
                 answer_content = (
-                    f"As KESH, the Dedicated Revenue AI Agent for **{hotel_name}**, I am monitoring occupancy velocity, "
-                    f"competitor rate parity in {hotel_obj.city if hotel_obj else 'Chennai'}, and local demand signals. "
-                    f"You can ask me to recommend room rates for any date (e.g. 'What price can I fix on Oct 10?'), show room categories, analyze competitor prices, or inspect demand forecasts!"
+                    f"I can provide rates, room counts, events, and performance metrics for **{hotel_name}** ({hotel_obj.city if hotel_obj else 'Chennai'}). What would you like to check?"
                 )
 
         # Record Assistant turn in Short-Term Memory
@@ -298,10 +323,10 @@ class SingleAutonomousRevenueAgent:
         return {
             "agent_run_id": agent_run_id,
             "answer": answer_content,
-            "recommendation": final_recommendation,
-            "factors": factors,
+            "recommendation": final_recommendation if is_pricing_query else None,
+            "factors": factors if is_pricing_query else [],
             "tools_used": tools_used,
-            "requires_approval": requires_approval,
+            "requires_approval": requires_approval if is_pricing_query else False,
             "execution_time_seconds": execution_seconds,
         }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api';
 import { AgentChatResponse, PriceRecommendation } from '../types';
 import { Bot, Send, User as UserIcon, CheckCircle2, XCircle, Edit3, Sparkles, ShieldAlert, Cpu, Zap, PlusCircle, MessageSquare, Trash2 } from 'lucide-react';
@@ -89,6 +89,27 @@ export const Assistant: React.FC = () => {
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
   const messages = activeSession ? activeSession.messages : [defaultGreeting];
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+    }
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior,
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom('smooth');
+    const timer = setTimeout(() => scrollToBottom('smooth'), 120);
+    return () => clearTimeout(timer);
+  }, [messages, loading, activeSessionId]);
+
   const handleNewChat = () => {
     const newId = `sess_${Date.now()}`;
     const newSession: ChatSession = {
@@ -106,6 +127,7 @@ export const Assistant: React.FC = () => {
 
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newId);
+    setTimeout(() => scrollToBottom('auto'), 50);
   };
 
   const handleDeleteSession = (sessionId: string) => {
@@ -154,7 +176,98 @@ export const Assistant: React.FC = () => {
 
     const targetDate = extractDateStr(query);
 
-    // Intent 1: Pricing / Rate recommendation / Fix price
+    // Intent 1: Events, Festivals, Holidays & Dates Query (High Priority)
+    if (
+      qLower.includes('event') ||
+      qLower.includes('holiday') ||
+      qLower.includes('festival') ||
+      qLower.includes('navratri') ||
+      qLower.includes('golu') ||
+      qLower.includes('diwali') ||
+      qLower.includes('pongal') ||
+      qLower.includes('summit') ||
+      qLower.includes('what date') ||
+      qLower.includes('when is')
+    ) {
+      if (qLower.includes('navratri') || qLower.includes('golu')) {
+        return {
+          id: `asst_${Date.now()}`,
+          sender: 'assistant',
+          content: `**Navratri Golu Festival (${hotelCity})** is scheduled from **October 10, 2026 to October 19, 2026** (Venue: Mylapore Kapaleeshwarar & City Temples).`,
+        };
+      } else if (qLower.includes('diwali')) {
+        return {
+          id: `asst_${Date.now()}`,
+          sender: 'assistant',
+          content: `**Diwali Festival (${hotelCity})** is scheduled from **November 01, 2026 to November 05, 2026**.`,
+        };
+      } else {
+        return {
+          id: `asst_${Date.now()}`,
+          sender: 'assistant',
+          content:
+            `**Upcoming Events in ${hotelCity}:**\n` +
+            `• **Navratri Golu Festival**: Oct 10 – Oct 19, 2026\n` +
+            `• **International Tech Summit**: Oct 18 – Oct 22, 2026\n` +
+            `• **Diwali Festival**: Nov 01 – Nov 05, 2026`,
+        };
+      }
+    }
+
+    // Intent 2: Total rooms / property capacity
+    if (qLower.includes('total room') || qLower.includes('how many room') || qLower.includes('capacity') || qLower.includes('number of room')) {
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content: `**${hotelName}** (${hotelCity}) has a total capacity of **${totalRooms} Rooms**.`,
+      };
+    }
+
+    // Intent 3: Room Categories / Inventory List / Baseline Rates
+    if (qLower.includes('room name') || qLower.includes('baseline') || qLower.includes('category') || qLower.includes('categories') || qLower.includes('types') || qLower.includes('inventory')) {
+      let rtList = '';
+      if (roomTypes.length > 0) {
+        rtList = roomTypes
+          .map((r) => `• **${r.room_type_name}**: ${r.total_inventory || 10} Units (₹${Number(r.base_price).toLocaleString('en-IN')}/night)`)
+          .join('\n');
+      } else {
+        rtList =
+          `• **Superior Comfort Room**: 10 Units (₹3,800/night)\n` +
+          `• **Deluxe Executive Room**: 10 Units (₹5,800/night)\n` +
+          `• **Luxury Executive Suite**: 5 Units (₹9,800/night)`;
+      }
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content:
+          `**Room Categories for ${hotelName}:**\n` +
+          `${rtList}`,
+      };
+    }
+
+    // Intent 4: Competitor Benchmark
+    if (qLower.includes('competitor') || qLower.includes('market median') || qLower.includes('rival') || qLower.includes('parity') || qLower.includes('price gap') || qLower.includes('rate gap')) {
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content:
+          `**Competitor Rates (${hotelName}):**\n` +
+          `• **Our Active Rate**: ₹4,500 | **Market Median**: ₹4,200`,
+      };
+    }
+
+    // Intent 5: Demand Forecast
+    if (qLower.includes('forecast') || qLower.includes('occupancy') || qLower.includes('pace') || qLower.includes('projection')) {
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content:
+          `**Demand Forecast (${hotelName}):**\n` +
+          `• **Projected Occupancy**: **82.5%** | **Target RevPAR**: **₹4,950**`,
+      };
+    }
+
+    // Intent 6: Pricing / Rate recommendation / Fix price
     if (qLower.includes('price') || qLower.includes('rate') || qLower.includes('fix') || qLower.includes('recommend') || qLower.includes('cost') || qLower.includes('charge')) {
       const primaryRt = roomTypes.length > 0 ? roomTypes[0] : { room_type_name: 'Superior Comfort Room', base_price: 3800, room_type_code: '8485_SUP' };
       const baseRate = primaryRt.base_price || 3800;
@@ -165,66 +278,49 @@ export const Assistant: React.FC = () => {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
         content:
-          `**Dynamic Rate Recommendation — ${hotelName}**\n\n` +
-          `• **Target Stay Date**: \`${targetDate}\`\n` +
-          `• **Room Category**: **${primaryRt.room_type_name}** (\`${primaryRt.room_type_code || '8485_SUP'}\`)\n` +
-          `• **Recommended Dynamic Rate**: **₹${recRate.toLocaleString('en-IN')}** (Baseline: ₹${baseRate.toLocaleString('en-IN')})\n` +
-          `• **Projected Occupancy**: **82.5%**\n` +
-          `• **Competitor Market Median**: ₹${compMedian.toLocaleString('en-IN')}\n` +
-          `• **AI Model Confidence Score**: **92%**\n` +
-          `• **Contributing Revenue Signals**: High booking velocity (+14 rooms in last 48h), local event uplift in ${hotelCity}, and market rate parity positioning (+18% dynamic yield).\n\n` +
-          `✅ *Within automated guardrail boundaries — ready for PMS publishing.*`,
-        factors: [
-          `Base rate ₹${baseRate.toLocaleString('en-IN')} for ${primaryRt.room_type_name}`,
-          `High occupancy demand index (+18% multiplier)`,
-          `Competitor rate benchmark ₹${compMedian.toLocaleString('en-IN')}`,
-          `Automated rate floor/ceiling guardrail check passed`,
-        ],
-        tools_used: [
-          { tool_name: 'calculate_pricing_recommendation', execution_time_ms: 124 },
-          { tool_name: 'get_competitor_rates', execution_time_ms: 85 },
-          { tool_name: 'validate_price_guardrails', execution_time_ms: 32 },
-        ],
-        requires_approval: false,
+          `**Recommended Rate for ${targetDate} (${hotelName}):**\n` +
+          `• **Dynamic Rate**: **₹${recRate.toLocaleString('en-IN')}** (Base: ₹${baseRate.toLocaleString('en-IN')})\n` +
+          `• **Status**: ✅ Within guardrails`,
+        recommendation: {
+          stay_date: targetDate,
+          room_type_id: primaryRt.room_type_id || 1,
+          room_type_code: primaryRt.room_type_code || '8485_SUP',
+          room_type_name: primaryRt.room_type_name,
+          current_rate: baseRate,
+          recommended_rate: recRate,
+          competitor_median: compMedian,
+          confidence_score: 0.92,
+        },
       };
     }
 
-    // Intent 2: Total rooms / property details
-    if (qLower.includes('total room') || qLower.includes('how many room') || qLower.includes('capacity') || qLower.includes('hotel profile')) {
+    // Intent 7: Amenities, Dining, Check-in, Contact
+    if (qLower.includes('amenit') || qLower.includes('facility') || qLower.includes('pool') || qLower.includes('wifi')) {
       return {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
-        content:
-          `**Property Overview — ${hotelName}**\n\n` +
-          `• **Total Room Capacity**: **${totalRooms} Rooms**\n` +
-          `• **Location**: ${hotelCity}, India\n` +
-          `• **Active Room Categories**: ${roomTypes.length > 0 ? roomTypes.map((r) => r.room_type_name).join(', ') : 'Superior Comfort Room, Deluxe Executive Room, Luxury Executive Suite'}\n` +
-          `• **Autonomous Rate Guardrails**: Min Floor ₹3,000 | Max Ceiling ₹25,000`,
-        tools_used: [{ tool_name: 'get_hotel_profile', execution_time_ms: 45 }],
+        content: `**${hotelName}** amenities include an outdoor swimming pool, fitness center, high-speed Wi-Fi, and 24/7 concierge.`,
       };
     }
-
-    // Intent 3: Room Categories / Inventory List
-    if (qLower.includes('room name') || qLower.includes('baseline') || qLower.includes('category') || qLower.includes('types') || qLower.includes('inventory')) {
-      let rtList = '';
-      if (roomTypes.length > 0) {
-        rtList = roomTypes
-          .map((r) => `• **${r.room_type_name}** (\`${r.room_type_code}\`): **${r.total_inventory || 10} Units** | Max Occupancy: ${r.max_occupancy || 2} Guests | Baseline Rate: **₹${Number(r.base_price).toLocaleString('en-IN')}**`)
-          .join('\n');
-      } else {
-        rtList =
-          `• **Superior Comfort Room** (\`8485_SUP\`): **10 Units** | Baseline Rate: **₹3,800**\n` +
-          `• **Deluxe Executive Room** (\`8485_DLX\`): **10 Units** | Baseline Rate: **₹5,800**\n` +
-          `• **Luxury Executive Suite** (\`8485_STE\`): **5 Units** | Baseline Rate: **₹9,800**`;
-      }
+    if (qLower.includes('dining') || qLower.includes('restaurant') || qLower.includes('food') || qLower.includes('breakfast')) {
       return {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
-        content:
-          `Here are the active room categories and master inventory allocations for **${hotelName}** (${hotelCity}):\n\n` +
-          `${rtList}\n\n` +
-          `Total Master Capacity: **${totalRooms} Rooms**.`,
-        tools_used: [{ tool_name: 'get_room_types', execution_time_ms: 60 }],
+        content: `**${hotelName}** features on-site multi-cuisine dining at *Spice Route Restaurant* (7:00 AM - 11:00 PM) and 24-hour room service.`,
+      };
+    }
+    if (qLower.includes('check-in') || qLower.includes('check in') || qLower.includes('check out') || qLower.includes('timing')) {
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content: `**Check-in**: 2:00 PM | **Check-out**: 11:00 AM at ${hotelName}.`,
+      };
+    }
+    if (qLower.includes('contact') || qLower.includes('phone') || qLower.includes('email') || qLower.includes('address') || qLower.includes('location')) {
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content: `**${hotelName}** is located in central ${hotelCity}, Tamil Nadu (Reservations: +91 44 2855 0000 | reservations@cuteorangehotel.com).`,
       };
     }
 
@@ -232,14 +328,7 @@ export const Assistant: React.FC = () => {
     return {
       id: `asst_${Date.now()}`,
       sender: 'assistant',
-      content:
-        `Hello! As KESH, your Dedicated Revenue AI Agent for **${hotelName}** (${hotelCity}), I am actively monitoring live demand velocity, competitor rate parity, and occupancy forecasts.\n\n` +
-        `You can ask me:\n` +
-        `• *"What price can I fix on 10th oct 2026?"*\n` +
-        `• *"List out room names and baseline rates"*\n` +
-        `• *"Total rooms in this hotel"*\n` +
-        `• *"Analyze competitor price gap for ${hotelCity} property"*`,
-      tools_used: [{ tool_name: 'get_hotel_profile', execution_time_ms: 30 }],
+      content: `I can provide rates, room counts, events, and performance metrics for **${hotelName}** (${hotelCity}). What would you like to check?`,
     };
   };
 
@@ -263,6 +352,7 @@ export const Assistant: React.FC = () => {
     );
 
     setLoading(true);
+    setTimeout(() => scrollToBottom('smooth'), 50);
 
     try {
       const res: AgentChatResponse = await apiService.sendAgentChat(activeHotelId, query);
@@ -288,6 +378,8 @@ export const Assistant: React.FC = () => {
       );
     } finally {
       setLoading(false);
+      setTimeout(() => scrollToBottom('smooth'), 60);
+      setTimeout(() => scrollToBottom('smooth'), 200);
     }
   };
 
@@ -357,7 +449,7 @@ export const Assistant: React.FC = () => {
       </div>
 
       {/* Messages Stream */}
-      <div className="flex-1 p-6 overflow-y-auto space-y-6">
+      <div ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto space-y-6 scroll-smooth">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -439,18 +531,7 @@ export const Assistant: React.FC = () => {
                 </div>
               )}
 
-              {/* Tools Executed Drawer */}
-              {msg.tools_used && msg.tools_used.length > 0 && (
-                <div className="text-[10px] text-slate-400 flex items-center space-x-2 font-mono pt-1">
-                  <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Tools Executed:</span>
-                  {msg.tools_used.map((t, idx) => (
-                    <span key={idx} className="px-2 py-0.5 bg-slate-950 text-indigo-300 rounded-lg border border-slate-800">
-                      {t.tool_name} ({t.execution_time_ms}ms)
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* End of message bubble */}
             </div>
           </div>
         ))}
@@ -462,6 +543,8 @@ export const Assistant: React.FC = () => {
           </div>
         )}
 
+        {/* Scroll-to-bottom Anchor */}
+        <div ref={messagesEndRef} className="h-1" />
       </div>
 
       {/* Quick Prompt Suggestions */}

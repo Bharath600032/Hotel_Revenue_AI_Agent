@@ -290,6 +290,195 @@ class HotelAgentFactory:
                 db.add_all(new_comp_rates)
                 db.commit()
 
+        # 7. Ensure Events & Holidays exist for hotel city & region
+        try:
+            from app.models.events import Events, Holidays
+            from app.rag.vector_store import vector_store_manager
+
+            city_events_data = {
+                "Chennai": [
+                    {
+                        "name": "Navratri Golu Festival",
+                        "type": "FESTIVAL",
+                        "start": date(2026, 10, 10),
+                        "end": date(2026, 10, 19),
+                        "attendance": 65000,
+                        "venue": "Mylapore Kapaleeshwarar & City Temples",
+                        "importance": 4,
+                        "impact": 1.35,
+                    },
+                    {
+                        "name": "Chennai International Tech Summit",
+                        "type": "CONFERENCE",
+                        "start": date(2026, 10, 18),
+                        "end": date(2026, 10, 22),
+                        "attendance": 45000,
+                        "venue": "Chennai Trade Centre, Nandambakkam",
+                        "importance": 4,
+                        "impact": 1.25,
+                    },
+                    {
+                        "name": "Diwali Festive Holiday Period",
+                        "type": "FESTIVAL",
+                        "start": date(2026, 11, 1),
+                        "end": date(2026, 11, 5),
+                        "attendance": 100000,
+                        "venue": "Citywide & T. Nagar Shopping Hubs",
+                        "importance": 5,
+                        "impact": 1.40,
+                    },
+                    {
+                        "name": "Margazhi Music & Cultural Festival",
+                        "type": "CULTURAL",
+                        "start": date(2026, 12, 15),
+                        "end": date(2027, 1, 5),
+                        "attendance": 80000,
+                        "venue": "Music Academy & Mylapore Sabhas",
+                        "importance": 4,
+                        "impact": 1.25,
+                    },
+                    {
+                        "name": "Pongal Harvest Festival",
+                        "type": "CULTURAL",
+                        "start": date(2027, 1, 14),
+                        "end": date(2027, 1, 17),
+                        "attendance": 95000,
+                        "venue": "Marina Beach & Cultural Centres",
+                        "importance": 5,
+                        "impact": 1.35,
+                    },
+                ],
+                "Goa": [
+                    {
+                        "name": "Goa Sunburn Music Festival",
+                        "type": "FESTIVAL",
+                        "start": date(2026, 12, 27),
+                        "end": date(2026, 12, 31),
+                        "attendance": 85000,
+                        "venue": "Vagator Beach Arena",
+                        "importance": 5,
+                        "impact": 1.45,
+                    },
+                    {
+                        "name": "Goa Carnival & Parades",
+                        "type": "FESTIVAL",
+                        "start": date(2027, 2, 13),
+                        "end": date(2027, 2, 16),
+                        "attendance": 70000,
+                        "venue": "Panaji, Margao & Vasco",
+                        "importance": 4,
+                        "impact": 1.30,
+                    },
+                ],
+                "Mumbai": [
+                    {
+                        "name": "Mumbai Fashion & Luxury Expo",
+                        "type": "EXHIBITION",
+                        "start": date(2026, 11, 15),
+                        "end": date(2026, 11, 18),
+                        "attendance": 35000,
+                        "venue": "Jio World Convention Centre, BKC",
+                        "importance": 4,
+                        "impact": 1.25,
+                    },
+                ],
+                "Bengaluru": [
+                    {
+                        "name": "India International Tech Summit",
+                        "type": "CONFERENCE",
+                        "start": date(2026, 11, 18),
+                        "end": date(2026, 11, 21),
+                        "attendance": 50000,
+                        "venue": "Bangalore International Exhibition Centre",
+                        "importance": 5,
+                        "impact": 1.35,
+                    },
+                ],
+            }
+
+            h_city = hotel.city or "Chennai"
+            city_events = city_events_data.get(h_city, city_events_data["Chennai"])
+            for ev in city_events:
+                existing = db.query(Events).filter(Events.event_name == ev["name"], Events.city == h_city).first()
+                if not existing:
+                    e_obj = Events(
+                        city=h_city,
+                        event_name=ev["name"],
+                        event_type=ev["type"],
+                        start_date=ev["start"],
+                        end_date=ev["end"],
+                        expected_attendance=ev["attendance"],
+                        venue=ev["venue"],
+                        importance=ev["importance"],
+                        impact_factor=ev["impact"],
+                        source="EVENT_FEED",
+                    )
+                    db.add(e_obj)
+                    db.commit()
+                    try:
+                        vector_store_manager.ingest_document(
+                            title=f"Event: {e_obj.event_name} ({e_obj.city})",
+                            category="Local Events & Festivals",
+                            content=(
+                                f"Event Name: {e_obj.event_name}\n"
+                                f"City: {e_obj.city}\n"
+                                f"Dates: {e_obj.start_date} to {e_obj.end_date}\n"
+                                f"Type: {e_obj.event_type}\n"
+                                f"Venue: {e_obj.venue}\n"
+                                f"Expected Attendance: {e_obj.expected_attendance}\n"
+                                f"Importance: {e_obj.importance}/5\n"
+                                f"Demand Impact Multiplier: {e_obj.impact_factor}"
+                            ),
+                            hotel_id=hotel_id,
+                            version="1.0.0"
+                        )
+                    except Exception:
+                        pass
+
+            # Ensure National / Regional Holidays
+            default_holidays = [
+                {"name": "Navratri Golu / Vijayadashami", "date": date(2026, 10, 19), "type": "REGIONAL", "region": "Tamil Nadu", "factor": 1.30, "importance": 4},
+                {"name": "Diwali Festival of Lights", "date": date(2026, 11, 1), "type": "NATIONAL", "region": "National", "factor": 1.40, "importance": 5},
+                {"name": "Christmas Holiday Season", "date": date(2026, 12, 25), "type": "NATIONAL", "region": "National", "factor": 1.30, "importance": 4},
+                {"name": "New Year's Eve Celebration", "date": date(2026, 12, 31), "type": "NATIONAL", "region": "National", "factor": 1.50, "importance": 5},
+                {"name": "Pongal Harvest Holiday", "date": date(2027, 1, 14), "type": "REGIONAL", "region": "Tamil Nadu", "factor": 1.35, "importance": 5},
+                {"name": "Republic Day", "date": date(2027, 1, 26), "type": "NATIONAL", "region": "National", "factor": 1.20, "importance": 3},
+            ]
+            for hol in default_holidays:
+                existing_h = db.query(Holidays).filter(Holidays.holiday_name == hol["name"]).first()
+                if not existing_h:
+                    h_obj = Holidays(
+                        country="India",
+                        region=hol["region"],
+                        holiday_date=hol["date"],
+                        holiday_name=hol["name"],
+                        holiday_type=hol["type"],
+                        importance=hol["importance"],
+                        impact_factor=hol["factor"],
+                    )
+                    db.add(h_obj)
+                    db.commit()
+                    try:
+                        vector_store_manager.ingest_document(
+                            title=f"Holiday: {h_obj.holiday_name}",
+                            category="Holidays & Observances",
+                            content=(
+                                f"Holiday Name: {h_obj.holiday_name}\n"
+                                f"Date: {h_obj.holiday_date}\n"
+                                f"Country: India\n"
+                                f"Region: {h_obj.region}\n"
+                                f"Type: {h_obj.holiday_type}\n"
+                                f"Importance: {h_obj.importance}/5\n"
+                                f"Impact Factor: {h_obj.impact_factor}"
+                            ),
+                            hotel_id=hotel_id,
+                            version="1.0.0"
+                        )
+                    except Exception:
+                        pass
+        except Exception as seed_ev_err:
+            logger.warning("ensure_city_events_failed", error=str(seed_ev_err))
+
     def provision_new_hotel(self, db: Session, hotel_id: int) -> Dict[str, Any]:
         """
         Auto-provision full AI Agent infrastructure for a newly registered hotel property.
