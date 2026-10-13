@@ -420,22 +420,24 @@ class HotelAgentFactory:
                     db.add(e_obj)
                     db.commit()
                     try:
-                        vector_store_manager.ingest_document(
-                            title=f"Event: {e_obj.event_name} ({e_obj.city})",
-                            category="Local Events & Festivals",
-                            content=(
-                                f"Event Name: {e_obj.event_name}\n"
-                                f"City: {e_obj.city}\n"
-                                f"Dates: {e_obj.start_date} to {e_obj.end_date}\n"
-                                f"Type: {e_obj.event_type}\n"
-                                f"Venue: {e_obj.venue}\n"
-                                f"Expected Attendance: {e_obj.expected_attendance}\n"
-                                f"Importance: {e_obj.importance}/5\n"
-                                f"Demand Impact Multiplier: {e_obj.impact_factor}"
-                            ),
-                            hotel_id=hotel_id,
-                            version="1.0.0"
+                        import threading
+                        _ev_title = f"Event: {e_obj.event_name} ({e_obj.city})"
+                        _ev_content = (
+                            f"Event Name: {e_obj.event_name}\n"
+                            f"City: {e_obj.city}\n"
+                            f"Dates: {e_obj.start_date} to {e_obj.end_date}\n"
+                            f"Type: {e_obj.event_type}\n"
+                            f"Venue: {e_obj.venue}\n"
+                            f"Expected Attendance: {e_obj.expected_attendance}\n"
+                            f"Importance: {e_obj.importance}/5\n"
+                            f"Demand Impact Multiplier: {e_obj.impact_factor}"
                         )
+                        threading.Thread(
+                            target=lambda t=_ev_title, c=_ev_content, hid=hotel_id: vector_store_manager.ingest_document(
+                                title=t, category="Local Events & Festivals", content=c, hotel_id=hid, version="1.0.0"
+                            ),
+                            daemon=True,
+                        ).start()
                     except Exception:
                         pass
 
@@ -463,21 +465,23 @@ class HotelAgentFactory:
                     db.add(h_obj)
                     db.commit()
                     try:
-                        vector_store_manager.ingest_document(
-                            title=f"Holiday: {h_obj.holiday_name}",
-                            category="Holidays & Observances",
-                            content=(
-                                f"Holiday Name: {h_obj.holiday_name}\n"
-                                f"Date: {h_obj.holiday_date}\n"
-                                f"Country: India\n"
-                                f"Region: {h_obj.region}\n"
-                                f"Type: {h_obj.holiday_type}\n"
-                                f"Importance: {h_obj.importance}/5\n"
-                                f"Impact Factor: {h_obj.impact_factor}"
-                            ),
-                            hotel_id=hotel_id,
-                            version="1.0.0"
+                        import threading
+                        _hol_title = f"Holiday: {h_obj.holiday_name}"
+                        _hol_content = (
+                            f"Holiday Name: {h_obj.holiday_name}\n"
+                            f"Date: {h_obj.holiday_date}\n"
+                            f"Country: India\n"
+                            f"Region: {h_obj.region}\n"
+                            f"Type: {h_obj.holiday_type}\n"
+                            f"Importance: {h_obj.importance}/5\n"
+                            f"Impact Factor: {h_obj.impact_factor}"
                         )
+                        threading.Thread(
+                            target=lambda t=_hol_title, c=_hol_content, hid=hotel_id: vector_store_manager.ingest_document(
+                                title=t, category="Holidays & Observances", content=c, hotel_id=hid, version="1.0.0"
+                            ),
+                            daemon=True,
+                        ).start()
                     except Exception:
                         pass
         except Exception as seed_ev_err:

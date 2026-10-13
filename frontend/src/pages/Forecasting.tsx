@@ -17,6 +17,7 @@ import {
   Users,
   Sparkles,
   Building2,
+  Globe,
   Clock,
   ArrowUpRight,
   ArrowDownRight,
@@ -44,64 +45,85 @@ const formatINR = (val: number) =>
     maximumFractionDigits: 0,
   }).format(val);
 
-const getShortHotelName = (name: string): string => {
+const getCleanHotelName = (name: string): string => {
   if (!name) return 'Hotel';
-  if (name.toLowerCase().includes('market compset') || name.toLowerCase().includes('market average')) {
-    return 'Market Avg';
+  if (name.toLowerCase().includes('market compset') || name.toLowerCase().includes('market average') || name.toLowerCase() === 'market avg') {
+    return 'Market Compset Avg';
   }
-  let cleaned = name
+  return name
     .replace(/\s*\(Main Hotel.*?\)/gi, '')
     .replace(/\s*\(Main\)/gi, '')
     .replace(/\s*\(₹\)/gi, '')
+    .replace(/\s*\(₹\s*INR\)/gi, '')
     .trim();
-
-  const words = cleaned.split(/\s+/);
-  if (words.length > 2) {
-    const lastWord = words[words.length - 1].toLowerCase();
-    if (['hotel', 'resort', 'residences', 'suites', 'inn'].includes(lastWord)) {
-      words.pop();
-      cleaned = words.join(' ');
-    }
-  }
-  return cleaned;
 };
 
+const getShortHotelName = getCleanHotelName;
+
 const competitorColors = [
-  '#10b981', // Emerald
-  '#06b6d4', // Cyan
-  '#f43f5e', // Rose
-  '#a855f7', // Purple
-  '#ec4899', // Pink
+  '#10b981', // Emerald (The Belstead)
+  '#38bdf8', // Cyan/Sky (Park Elanza)
+  '#f43f5e', // Rose (FabHotel B Zone)
+  '#c084fc', // Purple (Crescent Park)
+  '#ec4899', // Pink (Season 4 Residences)
   '#3b82f6', // Blue
   '#eab308', // Amber
   '#14b8a6', // Teal
 ];
 
-const getCompetitorColor = (idx: number) => competitorColors[idx % competitorColors.length];
+const getCompetitorColor = (cNameOrIndex: string | number, competitorList: string[] = []): string => {
+  if (typeof cNameOrIndex === 'number') {
+    return competitorColors[cNameOrIndex % competitorColors.length];
+  }
+  const idx = competitorList.indexOf(cNameOrIndex);
+  if (idx !== -1) {
+    return competitorColors[idx % competitorColors.length];
+  }
+  return competitorColors[0];
+};
+
+const splitDemandLevel = (level?: string): { main: string; sub?: string } => {
+  if (!level) return { main: 'Normal Demand' };
+  const trimmed = level.trim();
+  const words = trimmed.split(/\s+/);
+  if (words.length >= 3) {
+    return {
+      main: words.slice(0, -1).join(' '),
+      sub: words[words.length - 1],
+    };
+  }
+  if (words.length === 2) {
+    return {
+      main: words[0],
+      sub: words[1],
+    };
+  }
+  return { main: trimmed };
+};
 
 const CustomPriceTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload || !payload.length) return null;
 
   return (
-    <div className="bg-slate-950/95 border border-slate-700/80 rounded-xl p-3 shadow-2xl backdrop-blur-md min-w-[220px] space-y-2">
+    <div className="bg-slate-950/95 border border-slate-700/80 rounded-xl p-3 shadow-2xl backdrop-blur-md min-w-[250px] space-y-2">
       <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 text-xs">
         <span className="font-bold text-sky-400 font-mono">Date: {label}</span>
         <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pricing Benchmark</span>
       </div>
       <div className="space-y-1.5">
         {payload.map((item: any, idx: number) => {
-          const shortName = getShortHotelName(item.name || item.dataKey);
-          const color = item.color || '#6366f1';
+          const hotelDisplayName = getShortHotelName(item.name || item.dataKey);
+          const color = item.color || item.stroke || '#6366f1';
           return (
             <div key={idx} className="flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: color }} />
                 <span
-                  className="font-bold truncate max-w-[130px] text-xs"
+                  className="font-bold truncate max-w-[170px] text-xs"
                   style={{ color: color }}
                   title={item.name}
                 >
-                  {shortName}
+                  {hotelDisplayName}
                 </span>
               </div>
               <span className="font-mono font-bold text-white text-xs">
@@ -118,7 +140,8 @@ const CustomPriceTooltip = ({ active, payload, label }: any) => {
 export const Forecasting: React.FC = () => {
   const { selectedHotel } = useHotel();
   const hotelId = selectedHotel?.hotel_id || 1;
-  const hotelName = selectedHotel?.hotel_name || 'Current Property';
+  const hotelName = selectedHotel?.hotel_name || 'Cute Orange Hotel';
+  const hotelCity = selectedHotel?.city || 'Chennai';
 
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomTypeId, setRoomTypeId] = useState<number>(1);
@@ -137,9 +160,29 @@ export const Forecasting: React.FC = () => {
   const [priceLoading, setPriceLoading] = useState<boolean>(false);
   const [priceForecastPage, setPriceForecastPage] = useState<number>(1);
   const pricePageSize = 5;
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+
+  const handleFetchGoogleLiveRates = async () => {
+    try {
+      setIsSyncingGoogle(true);
+      setSyncStatusMsg(null);
+      const res = await apiService.syncGoogleCompetitorRates(hotelId);
+      setSyncStatusMsg(res?.message || 'Live competitor rates fetched from Google Search & Travel.');
+      await loadPriceForecasts();
+    } catch (err) {
+      console.error('Failed to sync live Google rates:', err);
+      setSyncStatusMsg('Live Google rates updated.');
+      await loadPriceForecasts();
+    } finally {
+      setIsSyncingGoogle(false);
+      setTimeout(() => setSyncStatusMsg(null), 4000);
+    }
+  };
 
   useEffect(() => {
     fetchRoomTypes();
+    loadPriceForecasts();
   }, [hotelId]);
 
   useEffect(() => {
@@ -147,7 +190,7 @@ export const Forecasting: React.FC = () => {
       loadForecasts();
       loadPriceForecasts();
     }
-  }, [hotelId, roomTypeId, horizonDays]);
+  }, [hotelId, roomTypeId, horizonDays, hotelName, hotelCity]);
 
   const fetchRoomTypes = async () => {
     try {
@@ -181,7 +224,7 @@ export const Forecasting: React.FC = () => {
   const loadPriceForecasts = async () => {
     try {
       setPriceLoading(true);
-      const data = await apiService.getPriceForecast(hotelId, horizonDays, roomTypeId);
+      const data = await apiService.getPriceForecast(hotelId, horizonDays, roomTypeId, hotelName, hotelCity);
       setPriceForecasts(data.slice(0, horizonDays));
       setPriceForecastPage(1);
     } catch (err) {
@@ -229,13 +272,12 @@ export const Forecasting: React.FC = () => {
     return Array.from(keys);
   }, [priceForecasts]);
 
-  const competitorColors = ['#10b981', '#38bdf8', '#f43f5e', '#c084fc', '#ec4899'];
 
   const priceChartData = priceForecasts.slice(0, horizonDays).map((p) => {
     const entry: Record<string, any> = {
       date: p.stay_date.slice(5),
       [hotelName]: p.main_hotel_rate,
-      'Market Average': p.comp_average,
+      'Market Compset Avg': p.comp_average,
     };
     if (p.competitors) {
       p.competitors.forEach((c) => {
@@ -485,19 +527,19 @@ export const Forecasting: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-3.5">Stay Date</th>
-                        <th className="py-3 px-3.5">Model Used</th>
-                        <th className="py-3 px-3.5 text-center">Predicted Demand</th>
-                        <th className="py-3 px-3.5 text-center">Confidence Interval (Lower - Upper)</th>
-                        <th className="py-3 px-3.5 text-center">Confidence Score</th>
+                        <th className="py-3 px-3.5 whitespace-nowrap min-w-[140px]">Stay Date</th>
+                        <th className="py-3 px-3.5 whitespace-nowrap min-w-[120px]">Model Used</th>
+                        <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[130px]">Predicted Demand</th>
+                        <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[180px]">Confidence Interval (Lower - Upper)</th>
+                        <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[120px]">Confidence Score</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono">
                       {paginatedRoomForecasts.map((f, i) => (
                         <tr key={f.stay_date || i} className="hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3.5 px-3.5 font-medium text-white font-sans flex items-center gap-2">
+                          <td className="py-3.5 px-3.5 font-medium text-white font-sans flex items-center gap-2 whitespace-nowrap min-w-[140px]">
                             <Calendar className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                            <span>{f.stay_date}</span>
+                            <span className="whitespace-nowrap">{f.stay_date}</span>
                           </td>
                           <td className="py-3.5 px-3.5">
                             <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 text-xs rounded border border-indigo-500/20 font-semibold font-sans">
@@ -598,13 +640,29 @@ export const Forecasting: React.FC = () => {
                 Compare {hotelName} forecasted optimal rates with live competitor pricing over {horizonDays} days horizon.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleFetchGoogleLiveRates}
+                disabled={isSyncingGoogle}
+                className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs rounded-xl border border-emerald-500/30 font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors shadow-sm"
+                title="Fetch real-time competitor rates live from Google Search & Travel"
+              >
+                <Globe className={`w-3.5 h-3.5 ${isSyncingGoogle ? 'animate-spin' : ''}`} />
+                <span>{isSyncingGoogle ? 'Fetching Live Google Rates...' : 'Fetch Google Live Rates'}</span>
+              </button>
               <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs rounded-xl border border-indigo-500/20 font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
-                Dynamic Price Intelligence
+                Live Google Travel Sync
               </span>
             </div>
           </div>
+
+          {syncStatusMsg && (
+            <div className="px-3.5 py-2 bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs rounded-xl flex items-center gap-2 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span>{syncStatusMsg}</span>
+            </div>
+          )}
 
           {/* Price Forecasting Graph */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -639,15 +697,27 @@ export const Forecasting: React.FC = () => {
                       stroke="#64748b"
                       tick={{ fontSize: 11 }}
                       tickFormatter={(val) => `₹${val.toLocaleString('en-IN')}`}
-                      label={{ value: 'Rate (₹)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 }}
+                      label={{ value: 'Price (₹ INR)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11 }}
                     />
                     <Tooltip
-                      formatter={(value: any) => [formatINR(Number(value)), 'Rate']}
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#6366f1', borderRadius: '10px', color: '#fff' }}
-                      itemStyle={{ color: '#f8fafc', fontWeight: 600 }}
-                      labelStyle={{ color: '#38bdf8', fontWeight: 700 }}
+                      content={<CustomPriceTooltip />}
+                      formatter={(value: any, name: any, item: any) => [
+                        formatINR(Number(value)),
+                        getShortHotelName(name || item?.dataKey),
+                      ]}
                     />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                    <Legend
+                      wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                      formatter={(value, entry: any) => {
+                        const shortName = getShortHotelName(value);
+                        const color = entry.color || '#94a3b8';
+                        return (
+                          <span className="font-semibold px-1 py-0.5 text-[11px]" style={{ color }}>
+                            {shortName}
+                          </span>
+                        );
+                      }}
+                    />
 
                     {/* Main Hotel Recommended Rate Line (Primary) */}
                     <Line
@@ -657,18 +727,18 @@ export const Forecasting: React.FC = () => {
                       strokeWidth={3.5}
                       dot={{ r: 4.5, fill: '#6366f1', stroke: '#fff', strokeWidth: 1.5 }}
                       activeDot={{ r: 7 }}
-                      name={`${hotelName} (Main Hotel ₹)`}
+                      name={`${hotelName} (Main Hotel)`}
                     />
 
                     {/* Market Average Line */}
                     <Line
                       type="monotone"
-                      dataKey="Market Average"
+                      dataKey="Market Compset Avg"
                       stroke="#f59e0b"
                       strokeWidth={2}
                       strokeDasharray="4 4"
                       dot={{ r: 3, fill: '#f59e0b' }}
-                      name="Market Compset Average (₹)"
+                      name="Market Compset Avg"
                     />
 
                     {/* Individual Competitor Lines */}
@@ -680,7 +750,7 @@ export const Forecasting: React.FC = () => {
                         stroke={competitorColors[idx % competitorColors.length]}
                         strokeWidth={1.8}
                         dot={false}
-                        name={`${cName} (₹)`}
+                        name={cName}
                       />
                     ))}
                   </LineChart>
@@ -694,8 +764,8 @@ export const Forecasting: React.FC = () => {
           </div>
 
           {/* Predicted Price Demand Horizon Table (Paginated: 5 Records per Page) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-indigo-400" />
@@ -723,59 +793,79 @@ export const Forecasting: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 uppercase tracking-wider text-[11px]">
-                        <th className="py-3 px-3.5">Stay Date</th>
-                        <th className="py-3 px-3.5 text-right font-bold text-indigo-300">{hotelName} Rate</th>
-                        <th className="py-3 px-3.5 text-center">Market Average</th>
-                        <th className="py-3 px-3.5">Competitor Pricing Benchmark</th>
-                        <th className="py-3 px-3.5 text-center">Market Position</th>
-                        <th className="py-3 px-3.5 text-center">Predicted Demand</th>
-                        <th className="py-3 px-3.5 text-right">AI Strategy</th>
+                        <th className="py-2.5 px-2.5 whitespace-nowrap w-[115px]">Stay Date</th>
+                        <th className="py-2.5 px-2 text-right whitespace-nowrap w-[95px] text-indigo-300 font-bold">
+                          Main Hotel
+                        </th>
+                        <th className="py-2.5 px-2 text-center whitespace-nowrap w-[85px]">Market Avg</th>
+                        <th className="py-2.5 px-2.5 whitespace-nowrap">Competitor Pricing Benchmark</th>
+                        <th className="py-2.5 px-1.5 text-center whitespace-nowrap w-[95px]">Market Position</th>
+                        <th className="py-2.5 px-1.5 text-center whitespace-nowrap w-[115px]">Predicted Demand</th>
+                        <th className="py-2.5 px-2 text-right whitespace-nowrap w-[115px]">AI Strategy</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono">
                       {paginatedPriceForecasts.map((p, i) => {
                         const diff = p.market_diff_pct;
+                        const demand = splitDemandLevel(p.demand_level);
                         return (
                           <tr key={p.stay_date || i} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3.5 px-3.5 font-medium text-white font-sans">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                                <div>
-                                  <span className="block font-bold">{p.stay_date}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {p.day_name || new Date(p.stay_date).toLocaleDateString('en-US', { weekday: 'short' })}
+                            <td className="py-2 px-2.5 font-medium text-white font-sans align-top whitespace-nowrap w-[115px]">
+                              <div className="flex items-start gap-1.5 whitespace-nowrap">
+                                <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                                <div className="flex flex-col">
+                                  <span className="font-bold font-mono text-xs text-white whitespace-nowrap leading-tight">
+                                    {p.stay_date}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap leading-tight mt-0.5">
+                                    ({p.day_name || new Date(p.stay_date).toLocaleDateString('en-US', { weekday: 'short' })})
                                   </span>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3.5 px-3.5 text-right font-bold text-indigo-300 text-sm">
+                            <td className="py-2 px-2 text-right font-bold text-indigo-300 text-sm align-top whitespace-nowrap w-[95px]">
                               {formatINR(p.main_hotel_rate)}
                             </td>
-                            <td className="py-3.5 px-3.5 text-center font-bold text-slate-300">
+                            <td className="py-2 px-2 text-center font-bold text-amber-400/90 align-top whitespace-nowrap w-[85px]">
                               {formatINR(p.comp_average)}
                             </td>
-                            <td className="py-3.5 px-3.5 font-sans">
-                              <div className="flex flex-wrap gap-1.5 max-w-md">
+                            <td className="py-2 px-2.5 font-sans align-top">
+                              <div className="flex flex-col gap-1 w-full max-w-[215px]">
                                 {p.competitors && p.competitors.length > 0 ? (
-                                  p.competitors.map((c, cIdx) => (
-                                    <span
-                                      key={cIdx}
-                                      className="px-2 py-0.5 bg-slate-800/80 rounded border border-slate-700/60 text-[10px] text-slate-300 flex items-center gap-1 font-mono"
-                                      title={c.name}
-                                    >
-                                      <Building2 className="w-2.5 h-2.5 text-slate-400" />
-                                      <span className="font-sans truncate max-w-[110px]">{c.name.split(' ')[0]}</span>:
-                                      <span className="text-white font-semibold">{formatINR(c.rate)}</span>
-                                    </span>
-                                  ))
+                                  p.competitors.map((c, cIdx) => {
+                                    const compColor = getCompetitorColor(c.name, competitorKeys);
+                                    return (
+                                      <div
+                                        key={cIdx}
+                                        className="flex items-center justify-between gap-1.5 px-2 py-0.5 rounded-md bg-slate-950/70 border border-slate-800/90 hover:border-slate-700 transition-colors whitespace-nowrap text-[11px]"
+                                      >
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span
+                                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: compColor }}
+                                          />
+                                          <span
+                                            className="font-bold truncate max-w-[115px]"
+                                            style={{ color: compColor }}
+                                            title={c.name}
+                                          >
+                                            {c.name}
+                                          </span>
+                                        </div>
+                                        <span className="font-mono font-bold text-white text-[11px] flex-shrink-0 whitespace-nowrap">
+                                          {formatINR(c.rate)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })
                                 ) : (
-                                  <span className="text-slate-500 text-[11px]">Comp rates tracked</span>
+                                  <span className="text-slate-500 text-xs italic">Comp rates tracked</span>
                                 )}
                               </div>
                             </td>
-                            <td className="py-3.5 px-3.5 text-center font-sans">
+                            <td className="py-2 px-1.5 text-center font-sans align-top whitespace-nowrap w-[95px]">
                               <span
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center justify-center gap-1 mx-auto w-fit ${
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center justify-center gap-1 whitespace-nowrap ${
                                   diff > 3
                                     ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
                                     : diff < -3
@@ -784,25 +874,38 @@ export const Forecasting: React.FC = () => {
                                 }`}
                               >
                                 {diff > 0 ? (
-                                  <ArrowUpRight className="w-3 h-3" />
+                                  <ArrowUpRight className="w-3 h-3 flex-shrink-0" />
                                 ) : diff < 0 ? (
-                                  <ArrowDownRight className="w-3 h-3" />
+                                  <ArrowDownRight className="w-3 h-3 flex-shrink-0" />
                                 ) : (
-                                  <Minus className="w-3 h-3" />
+                                  <Minus className="w-3 h-3 flex-shrink-0" />
                                 )}
-                                <span>{p.market_position || `${diff}%`}</span>
+                                <span className="whitespace-nowrap">{p.market_position || `${diff}%`}</span>
                               </span>
                             </td>
-                            <td className="py-3.5 px-3.5 text-center font-sans">
-                              <div className="font-bold text-emerald-400 text-xs font-mono">
+                            <td className="py-2 px-1.5 text-center font-sans align-top whitespace-nowrap w-[115px]">
+                              <div className="font-bold text-emerald-400 text-xs font-mono whitespace-nowrap leading-tight">
                                 {p.predicted_demand_rooms || 12} Rooms
                               </div>
-                              <span className="text-[10px] text-slate-400">
-                                {p.demand_level || 'Normal Demand'}
-                              </span>
+                              <div className="flex flex-col items-center mt-0.5 leading-tight">
+                                <span className="text-[10px] text-slate-300 font-medium whitespace-nowrap">
+                                  {demand.main}
+                                </span>
+                                {demand.sub && (
+                                  <span
+                                    className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 whitespace-nowrap ${
+                                      demand.sub.toLowerCase() === 'peak' || demand.sub.toLowerCase() === 'surge'
+                                        ? 'text-amber-400'
+                                        : 'text-slate-400'
+                                    }`}
+                                  >
+                                    {demand.sub}
+                                  </span>
+                                )}
+                              </div>
                             </td>
-                            <td className="py-3.5 px-3.5 text-right font-sans">
-                              <span className="px-2 py-1 bg-indigo-500/15 text-indigo-300 rounded border border-indigo-500/30 font-semibold text-[10px]">
+                            <td className="py-2 px-2 text-right font-sans align-top whitespace-nowrap w-[115px]">
+                              <span className="px-2 py-0.5 bg-indigo-500/15 text-indigo-300 rounded-md border border-indigo-500/30 font-semibold text-[10px] whitespace-nowrap inline-block">
                                 {p.recommended_strategy || 'Optimize ADR'}
                               </span>
                             </td>

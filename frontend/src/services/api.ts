@@ -29,6 +29,7 @@ const API_BASE_URL = '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 12000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -128,7 +129,7 @@ export const apiService = {
     return res.data;
   },
 
-  getPriceForecast: async (hotelId: number, days: number = 30, roomTypeId?: number): Promise<any[]> => {
+  getPriceForecast: async (hotelId: number, days: number = 30, roomTypeId?: number, hotelName?: string, hotelCity?: string): Promise<any[]> => {
     try {
       const res = await apiClient.get(`/hotels/${hotelId}/forecasts/price-forecast`, {
         params: { days, room_type_id: roomTypeId },
@@ -141,14 +142,40 @@ export const apiService = {
       console.warn('Backend getPriceForecast failed or timed out, generating instant dynamic fallback:', err);
     }
     const results = [];
-    const basePrice = 6500;
+    const basePrice = 4500;
     const dayAbbrs = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const comps = [
-      { name: 'Grand Horizon Luxury Resort', factor: 1.08, star: 4.5 },
-      { name: 'The Leela Palace Hub', factor: 0.96, star: 4.2 },
-      { name: 'Taj Exotica Premium Suites', factor: 1.15, star: 4.8 },
-      { name: 'Radisson Blu Waterfront', factor: 0.92, star: 4.0 },
-    ];
+    const mainHotel = hotelName || 'Cute Orange Hotel';
+    const city = hotelCity || 'Chennai';
+    const cityCompMap: Record<string, { name: string; factor: number; star: number }[]> = {
+      Chennai: [
+        { name: 'The Belstead Hotel', factor: 1.08, star: 3.5 },
+        { name: 'Park Elanza', factor: 0.92, star: 3.5 },
+        { name: 'FabHotel B Zone', factor: 1.12, star: 3.0 },
+        { name: 'Crescent Park', factor: 1.02, star: 3.5 },
+        { name: 'Season 4 Residences', factor: 0.95, star: 3.0 },
+      ],
+      Goa: [
+        { name: 'Taj Exotica Resort Goa', factor: 1.15, star: 5.0 },
+        { name: 'The Leela Goa', factor: 1.12, star: 5.0 },
+        { name: 'W Goa', factor: 1.05, star: 5.0 },
+      ],
+      Mumbai: [
+        { name: 'The St. Regis Mumbai', factor: 1.18, star: 5.0 },
+        { name: 'Trident Nariman Point', factor: 1.05, star: 5.0 },
+        { name: 'Four Seasons Mumbai', factor: 1.10, star: 5.0 },
+      ],
+      Jaipur: [
+        { name: 'Rambagh Palace Jaipur', factor: 1.25, star: 5.0 },
+        { name: 'Oberoi Rajvilas', factor: 1.20, star: 5.0 },
+        { name: 'Fairmont Jaipur', factor: 1.08, star: 5.0 },
+      ],
+      Bengaluru: [
+        { name: 'The Leela Palace Bengaluru', factor: 1.14, star: 5.0 },
+        { name: 'JW Marriott Bengaluru', factor: 1.08, star: 5.0 },
+        { name: 'The Oberoi Bengaluru', factor: 1.12, star: 5.0 },
+      ],
+    };
+    const comps = cityCompMap[city] || cityCompMap.Chennai;
     for (let i = 0; i < days; i++) {
       const cur = new Date(Date.now() + i * 86400000);
       const isWeekend = cur.getDay() === 5 || cur.getDay() === 6;
@@ -171,7 +198,7 @@ export const apiService = {
       results.push({
         stay_date: cur.toISOString().split('T')[0],
         day_name: dayAbbrs[cur.getDay()],
-        main_hotel_name: 'Current Hotel Property',
+        main_hotel_name: mainHotel,
         main_hotel_rate: mainRate,
         comp_average: compAvg,
         comp_min: compMin,

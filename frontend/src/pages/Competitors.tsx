@@ -44,6 +44,14 @@ export const Competitors: React.FC = () => {
     const saved = localStorage.getItem(`competitor_my_rate_${hotelId}`);
     return saved ? Number(saved) : (selectedHotel?.min_price_floor ? Math.round(selectedHotel.min_price_floor * 1.8) : 8500);
   });
+  const [debouncedRate, setDebouncedRate] = useState<number>(myRate);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRate(myRate);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [myRate]);
 
   const handleMyRateChange = (val: number) => {
     setMyRate(val);
@@ -52,9 +60,23 @@ export const Competitors: React.FC = () => {
     }
   };
 
-  const [competitors, setCompetitors] = useState<CompetitorHotel[]>([]);
-  const [analysis, setAnalysis] = useState<CompetitorAnalysis | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [competitors, setCompetitors] = useState<CompetitorHotel[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(`cached_competitors_${hotelId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [analysis, setAnalysis] = useState<CompetitorAnalysis | null>(() => {
+    try {
+      const cached = sessionStorage.getItem(`cached_comp_analysis_${hotelId}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(() => competitors.length === 0 && !analysis);
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [expandedCompId, setExpandedCompId] = useState<number | null>(null);
@@ -70,19 +92,23 @@ export const Competitors: React.FC = () => {
 
   useEffect(() => {
     fetchCompetitorData();
-  }, [hotelId, stayDate, myRate]);
+  }, [hotelId, stayDate, debouncedRate]);
 
   const fetchCompetitorData = async () => {
     try {
-      if (competitors.length === 0) {
+      if (competitors.length === 0 && !analysis) {
         setLoading(true);
       }
       const [compList, compAnalysis] = await Promise.all([
         apiService.getCompetitors(hotelId),
-        apiService.getCompetitorAnalysis(hotelId, stayDate, myRate),
+        apiService.getCompetitorAnalysis(hotelId, stayDate, debouncedRate || myRate),
       ]);
       setCompetitors(compList);
       setAnalysis(compAnalysis);
+      try {
+        sessionStorage.setItem(`cached_competitors_${hotelId}`, JSON.stringify(compList));
+        sessionStorage.setItem(`cached_comp_analysis_${hotelId}`, JSON.stringify(compAnalysis));
+      } catch {}
     } catch (err) {
       console.error('Failed to load competitor data:', err);
     } finally {

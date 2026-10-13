@@ -71,8 +71,23 @@ class CompetitorEngine:
         )
 
         if not comp_hotels:
-            from app.agents.hotel_agent_factory import hotel_agent_factory
-            hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
+            hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+            city = (hotel.city if hotel and hotel.city else "Chennai")
+            city_comps = {
+                "Chennai": ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"],
+                "Goa": ["Taj Exotica Resort Goa", "The Leela Goa", "Radisson Blu Resort Goa"],
+                "Mumbai": ["Taj Mahal Palace Mumbai", "The Oberoi Mumbai", "JW Marriott Juhu"],
+            }
+            names = city_comps.get(city, ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"])
+            for c_name in names:
+                db.add(CompetitorHotels(
+                    hotel_id=hotel_id,
+                    competitor_name=c_name,
+                    city=city,
+                    star_rating=4.0,
+                    status="ACTIVE",
+                ))
+            db.commit()
             comp_hotels = (
                 db.query(CompetitorHotels)
                 .filter(
@@ -105,13 +120,7 @@ class CompetitorEngine:
         from app.competitors.google_scraper import google_hotel_scraper
         from app.schemas.competitor import CompetitorRateInfo
 
-        # Ensure SQLite database schema has ota_name column
-        try:
-            from sqlalchemy import text
-            db.execute(text("ALTER TABLE competitor_rates ADD COLUMN ota_name VARCHAR(100) DEFAULT 'Booking.com'"))
-            db.commit()
-        except Exception:
-            db.rollback()
+        # Fast query rates for stay_date
 
         # Query rates for stay_date
         comp_rates_records = (
