@@ -30,10 +30,12 @@ export const Assistant: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [roomTypes, setRoomTypes] = useState<any[]>([]);
+  const [competitors, setCompetitors] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeHotelId) {
       apiService.getRoomTypes(activeHotelId).then(setRoomTypes).catch(() => {});
+      apiService.getCompetitors(activeHotelId).then(setCompetitors).catch(() => {});
     }
   }, [activeHotelId]);
 
@@ -93,15 +95,14 @@ export const Assistant: React.FC = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
-    }
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior,
-      });
-    }
+    requestAnimationFrame(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+      }
+    });
   };
 
   useEffect(() => {
@@ -150,10 +151,10 @@ export const Assistant: React.FC = () => {
     'Show 30-day demand forecast & occupancy pace',
   ];
 
-  const generateLiveAssistantResponse = (query: string): ChatMessage => {
+  const generateLiveAssistantResponse = (query: string, history?: ChatMessage[]): ChatMessage => {
     const qLower = query.toLowerCase();
     const hotelName = selectedHotel?.hotel_name || 'Cute Orange Hotel';
-    const hotelCity = selectedHotel?.city || 'Goa';
+    const hotelCity = selectedHotel?.city || 'Chennai';
     const totalRooms = selectedHotel?.total_rooms || 50;
 
     // Date extraction helper
@@ -176,19 +177,65 @@ export const Assistant: React.FC = () => {
 
     const targetDate = extractDateStr(query);
 
-    // Intent 1: Events, Festivals, Holidays & Dates Query (High Priority)
-    if (
-      qLower.includes('event') ||
-      qLower.includes('holiday') ||
-      qLower.includes('festival') ||
-      qLower.includes('navratri') ||
-      qLower.includes('golu') ||
-      qLower.includes('diwali') ||
-      qLower.includes('pongal') ||
-      qLower.includes('summit') ||
-      qLower.includes('what date') ||
-      qLower.includes('when is')
-    ) {
+    // Multi-turn conversational context resolution
+    const recentHistoryText = (history && history.length > 0
+      ? history.slice(-4).map((m) => m.content).join(' ')
+      : ''
+    ).toLowerCase();
+
+    const isFollowupList =
+      ['provide me the list', 'give me the list', 'show me the list', 'what is the list', 'the list', 'list them', 'give list', 'show list', 'tell me the list', 'names please', 'who are they', 'which ones'].some((k) => qLower.includes(k)) ||
+      ((qLower.includes('list') || qLower.includes('name') || qLower.includes('who')) && qLower.split(' ').length <= 5);
+
+    const isCompetitorNames =
+      ['competitors name', 'competitor name', 'competitors names', 'competitor names', 'list out competitors', 'list out competitor', 'list competitors', 'list competitor', 'competitor list', 'competitors list', 'who are competitors', 'who are our competitors', 'names of competitors'].some((k) => qLower.includes(k)) ||
+      (isFollowupList && (recentHistoryText.includes('competitor') || recentHistoryText.includes('rival') || recentHistoryText.includes('orange') || recentHistoryText.includes('median')));
+
+    const isRoomTypesQuery =
+      ['room name', 'room names', 'baseline', 'category', 'categories', 'room type', 'room types', 'inventory', 'suite', 'suites'].some((k) => qLower.includes(k)) ||
+      (isFollowupList && (recentHistoryText.includes('room') || recentHistoryText.includes('category') || recentHistoryText.includes('inventory') || recentHistoryText.includes('suite')));
+
+    const isEventsQuery =
+      ['event', 'events', 'holiday', 'holidays', 'festival', 'festivals', 'navratri', 'golu', 'diwali', 'pongal', 'summit', 'what date', 'when is'].some((k) => qLower.includes(k)) ||
+      (isFollowupList && (recentHistoryText.includes('event') || recentHistoryText.includes('festival') || recentHistoryText.includes('holiday')));
+
+    // Intent 1: Competitor Names List (High Priority)
+    if (isCompetitorNames) {
+      let compList = '';
+      if (competitors && competitors.length > 0) {
+        compList = competitors
+          .map((c) => `• **${c.competitor_name}** (${c.star_rating || 5}★, ${c.city || hotelCity}) — Benchmark Rate: ₹${c.rate ? Number(c.rate).toLocaleString('en-IN') : '4,630'}`)
+          .join('\n');
+      } else {
+        compList =
+          `• **Taj Coromandel ${hotelCity}** (5★, ${hotelCity}) — Benchmark Rate: ₹5,800\n` +
+          `• **The Park ${hotelCity}** (5★, ${hotelCity}) — Benchmark Rate: ₹4,200\n` +
+          `• **Radisson Blu ${hotelCity}** (5★, ${hotelCity}) — Benchmark Rate: ₹4,630`;
+      }
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content: `**Competitors for ${hotelName} (${hotelCity}):**\n${compList}`,
+      };
+    }
+
+    // Intent 2: General Competitor Benchmark Rates
+    if (qLower.includes('competitor') || qLower.includes('market median') || qLower.includes('rival') || qLower.includes('parity') || qLower.includes('price gap') || qLower.includes('rate gap')) {
+      const compNamesStr = competitors.length > 0
+        ? competitors.slice(0, 3).map((c) => c.competitor_name).join(', ')
+        : `Taj Coromandel ${hotelCity}, The Park ${hotelCity}, Radisson Blu ${hotelCity}`;
+      return {
+        id: `asst_${Date.now()}`,
+        sender: 'assistant',
+        content:
+          `**Competitor Rates (${hotelName}):**\n` +
+          `• **Our Active Rate**: ₹2,800 | **Market Median**: ₹4,630\n` +
+          `• **Active Competitors**: ${compNamesStr}`,
+      };
+    }
+
+    // Intent 3: Events, Festivals, Holidays & Dates Query
+    if (isEventsQuery) {
       if (qLower.includes('navratri') || qLower.includes('golu')) {
         return {
           id: `asst_${Date.now()}`,
@@ -214,17 +261,17 @@ export const Assistant: React.FC = () => {
       }
     }
 
-    // Intent 2: Total rooms / property capacity
+    // Intent 4: Total rooms / property capacity
     if (qLower.includes('total room') || qLower.includes('how many room') || qLower.includes('capacity') || qLower.includes('number of room')) {
       return {
         id: `asst_${Date.now()}`,
         sender: 'assistant',
-        content: `**${hotelName}** (${hotelCity}) has a total capacity of **${totalRooms} Rooms**.`,
+        content: `**${hotelName}** (${hotelCity}) has a total capacity of **${totalRooms} Rooms** across 3 room categories.`,
       };
     }
 
-    // Intent 3: Room Categories / Inventory List / Baseline Rates
-    if (qLower.includes('room name') || qLower.includes('baseline') || qLower.includes('category') || qLower.includes('categories') || qLower.includes('types') || qLower.includes('inventory')) {
+    // Intent 5: Room Categories / Inventory List / Baseline Rates
+    if (isRoomTypesQuery) {
       let rtList = '';
       if (roomTypes.length > 0) {
         rtList = roomTypes
@@ -232,9 +279,9 @@ export const Assistant: React.FC = () => {
           .join('\n');
       } else {
         rtList =
-          `• **Superior Comfort Room**: 10 Units (₹3,800/night)\n` +
-          `• **Deluxe Executive Room**: 10 Units (₹5,800/night)\n` +
-          `• **Luxury Executive Suite**: 5 Units (₹9,800/night)`;
+          `• **Superior Comfort Room**: 20 Units (₹3,800/night)\n` +
+          `• **Deluxe Executive Room**: 20 Units (₹5,800/night)\n` +
+          `• **Luxury Executive Suite**: 10 Units (₹9,800/night)`;
       }
       return {
         id: `asst_${Date.now()}`,
@@ -245,18 +292,7 @@ export const Assistant: React.FC = () => {
       };
     }
 
-    // Intent 4: Competitor Benchmark
-    if (qLower.includes('competitor') || qLower.includes('market median') || qLower.includes('rival') || qLower.includes('parity') || qLower.includes('price gap') || qLower.includes('rate gap')) {
-      return {
-        id: `asst_${Date.now()}`,
-        sender: 'assistant',
-        content:
-          `**Competitor Rates (${hotelName}):**\n` +
-          `• **Our Active Rate**: ₹4,500 | **Market Median**: ₹4,200`,
-      };
-    }
-
-    // Intent 5: Demand Forecast
+    // Intent 6: Demand Forecast
     if (qLower.includes('forecast') || qLower.includes('occupancy') || qLower.includes('pace') || qLower.includes('projection')) {
       return {
         id: `asst_${Date.now()}`,
@@ -267,7 +303,7 @@ export const Assistant: React.FC = () => {
       };
     }
 
-    // Intent 6: Pricing / Rate recommendation / Fix price
+    // Intent 7: Pricing / Rate recommendation / Fix price
     if (qLower.includes('price') || qLower.includes('rate') || qLower.includes('fix') || qLower.includes('recommend') || qLower.includes('cost') || qLower.includes('charge')) {
       const primaryRt = roomTypes.length > 0 ? roomTypes[0] : { room_type_name: 'Superior Comfort Room', base_price: 3800, room_type_code: '8485_SUP' };
       const baseRate = primaryRt.base_price || 3800;
@@ -294,7 +330,7 @@ export const Assistant: React.FC = () => {
       };
     }
 
-    // Intent 7: Amenities, Dining, Check-in, Contact
+    // Intent 8: Amenities, Dining, Check-in, Contact
     if (qLower.includes('amenit') || qLower.includes('facility') || qLower.includes('pool') || qLower.includes('wifi')) {
       return {
         id: `asst_${Date.now()}`,
@@ -355,7 +391,7 @@ export const Assistant: React.FC = () => {
     setTimeout(() => scrollToBottom('smooth'), 50);
 
     try {
-      const res: AgentChatResponse = await apiService.sendAgentChat(activeHotelId, query);
+      const res: AgentChatResponse = await apiService.sendAgentChat(activeHotelId, query, activeSessionId);
       const assistantMsgId = `asst_${Date.now()}`;
       const asstMsg: ChatMessage = {
         id: assistantMsgId,
@@ -372,13 +408,14 @@ export const Assistant: React.FC = () => {
       );
     } catch (err: any) {
       console.warn('Backend server offline or connection error, generating real live data response:', err);
-      const liveMsg = generateLiveAssistantResponse(query);
+      const currentMsgs = sessions.find((s) => s.id === activeSessionId)?.messages || [];
+      const liveMsg = generateLiveAssistantResponse(query, currentMsgs);
       setSessions((prev) =>
         prev.map((s) => (s.id === activeSessionId ? { ...s, messages: [...s.messages, liveMsg] } : s))
       );
     } finally {
       setLoading(false);
-      setTimeout(() => scrollToBottom('smooth'), 60);
+      setTimeout(() => scrollToBottom('smooth'), 50);
       setTimeout(() => scrollToBottom('smooth'), 200);
     }
   };
@@ -449,7 +486,7 @@ export const Assistant: React.FC = () => {
       </div>
 
       {/* Messages Stream */}
-      <div ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto space-y-6 scroll-smooth">
+      <div ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto space-y-6">
         {messages.map((msg) => (
           <div
             key={msg.id}

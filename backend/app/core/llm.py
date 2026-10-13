@@ -83,12 +83,28 @@ class MockLLMProvider(LLMProviderInterface):
         msg_lower = user_message.lower()
         extracted_date = parse_date_from_text(user_message)
 
+        # Detect follow-up list requests (e.g., "provide me the list?", "the list?", "give me the list")
+        is_followup_list = any(w in msg_lower for w in [
+            "provide me the list", "give me the list", "show me the list", "what is the list",
+            "the list?", "the list", "list them", "give list", "show list", "tell me the list",
+            "which are they", "what are they", "who are they", "which ones", "names please"
+        ]) or (("list" in msg_lower or "name" in msg_lower or "who" in msg_lower) and len(msg_lower.split()) <= 5)
+
+        # Extract only the actual recent conversation history turns from system_prompt
+        recent_chat_history = ""
+        if "RECENT CONVERSATION HISTORY:" in system_prompt:
+            parts = system_prompt.split("RECENT CONVERSATION HISTORY:")
+            if len(parts) > 1:
+                recent_chat_history = parts[1].split("HOTEL OPERATIONAL MEMORY:")[0].lower()
+
         # Intent 1: Events, Festivals, Holidays & Dates Query (High Priority)
         if any(w in msg_lower for w in [
             "event", "events", "holiday", "holidays", "festival", "festivals",
             "summit", "conference", "diwali", "navratri", "golu", "pongal", "calendar",
             "weather", "rain", "temp", "expo", "exhibition", "carnival", "concert"
-        ]) or any(k in msg_lower for k in ["what date", "when is", "dates of", "dates for", "date is"]):
+        ]) or any(k in msg_lower for k in ["what date", "when is", "dates of", "dates for", "date is"]) or (
+            is_followup_list and any(k in recent_chat_history for k in ["event", "festival", "holiday", "summit", "conference"])
+        ):
             return {
                 "thought": f"Fetching local events and holiday dates for query: '{user_message}'.",
                 "tool_calls": [
@@ -125,7 +141,9 @@ class MockLLMProvider(LLMProviderInterface):
             "room type", "room types", "room category", "room categories",
             "room name", "room names", "inventory", "suite", "suites",
             "baseline rate", "baseline rates", "base rate", "base rates"
-        ]):
+        ]) or (
+            is_followup_list and any(k in recent_chat_history for k in ["room", "suite", "inventory", "category", "baseline"])
+        ):
             return {
                 "thought": "Fetching room categories, base prices, and master inventory allocations.",
                 "tool_calls": [
@@ -137,10 +155,17 @@ class MockLLMProvider(LLMProviderInterface):
                 "content": None,
             }
 
-        # Intent 4: Competitor Benchmark Query
-        elif any(w in msg_lower for w in ["competitor", "market median", "comp set", "rival", "benchmark", "parity", "rate gap", "price gap"]):
+        # Intent 4: Competitor Benchmark & Competitor Names Query
+        elif any(w in msg_lower for w in [
+            "competitor", "competitors", "market median", "comp set", "rival", "rivals",
+            "benchmark", "parity", "rate gap", "price gap", "who are competitors", "competitor names",
+            "competitors name", "list out competitors", "list out competitor", "list competitors",
+            "list competitor", "competitor list", "competitors list"
+        ]) or (
+            is_followup_list and any(k in recent_chat_history for k in ["competitor", "rival", "comp", "orange"])
+        ):
             return {
-                "thought": "Analyzing competitor market rates and price positioning gap.",
+                "thought": "Analyzing competitor set, names, and market rates.",
                 "tool_calls": [
                     {
                         "tool_name": "get_competitor_rates",

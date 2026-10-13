@@ -53,24 +53,10 @@ async def create_holiday(
     db.commit()
     db.refresh(h)
 
-    # Auto-index into RAG Vector Store
+    # Sync into AI knowledge base immediately
     try:
-        from app.rag.vector_store import vector_store_manager
-        vector_store_manager.ingest_document(
-            title=f"Holiday: {h.holiday_name} ({h.country})",
-            category="Holidays & Observances",
-            content=(
-                f"Holiday Name: {h.holiday_name}\n"
-                f"Date: {h.holiday_date}\n"
-                f"Country: {h.country}\n"
-                f"Region: {h.region or 'National'}\n"
-                f"Type: {h.holiday_type}\n"
-                f"Importance: {h.importance}/5\n"
-                f"Demand Impact Multiplier: {h.impact_factor}"
-            ),
-            hotel_id=None,
-            version="Live Feed"
-        )
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_all_hotels(db)
     except Exception:
         pass
 
@@ -110,26 +96,10 @@ async def create_event(
     db.commit()
     db.refresh(e)
 
-    # Auto-index into RAG Vector Store
+    # Sync into AI knowledge base immediately
     try:
-        from app.rag.vector_store import vector_store_manager
-        vector_store_manager.ingest_document(
-            title=f"Event: {e.event_name} ({e.city})",
-            category="Local Events & Festivals",
-            content=(
-                f"Event Name: {e.event_name}\n"
-                f"City: {e.city}\n"
-                f"Dates: {e.start_date} to {e.end_date}\n"
-                f"Type: {e.event_type}\n"
-                f"Venue: {e.venue or e.city}\n"
-                f"Expected Attendance: {e.expected_attendance or 'Citywide'}\n"
-                f"Importance Rating: {e.importance}/5\n"
-                f"Projected Demand Impact Factor: {e.impact_factor}\n"
-                f"Source: {e.source}"
-            ),
-            hotel_id=None,
-            version="Live Feed"
-        )
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_all_hotels(db)
     except Exception:
         pass
 
@@ -148,6 +118,14 @@ async def delete_event(
         raise HTTPException(status_code=404, detail=f"Event ID {event_id} not found")
     db.delete(e)
     db.commit()
+
+    # Sync into AI knowledge base immediately
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_all_hotels(db)
+    except Exception:
+        pass
+
     return {"status": "DELETED", "event_id": event_id}
 
 
@@ -248,26 +226,10 @@ async def upload_events_excel(
 
     db.commit()
 
-    # Auto-index imported events into RAG Vector Store
+    # Sync into AI knowledge base immediately
     try:
-        from app.rag.vector_store import vector_store_manager
-        for ev in created_events:
-            vector_store_manager.ingest_document(
-                title=f"Event: {ev.event_name} ({ev.city})",
-                category="Local Events & Festivals",
-                content=(
-                    f"Event Name: {ev.event_name}\n"
-                    f"City: {ev.city}\n"
-                    f"Dates: {ev.start_date} to {ev.end_date}\n"
-                    f"Type: {ev.event_type}\n"
-                    f"Venue: {ev.venue or ev.city}\n"
-                    f"Expected Attendance: {ev.expected_attendance or 'N/A'}\n"
-                    f"Importance Rating: {ev.importance}/5\n"
-                    f"Source: {ev.source}"
-                ),
-                hotel_id=None,
-                version="Excel Upload"
-            )
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_all_hotels(db)
     except Exception:
         pass
 

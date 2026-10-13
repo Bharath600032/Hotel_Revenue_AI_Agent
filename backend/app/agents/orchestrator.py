@@ -50,16 +50,18 @@ def extract_crisp_rag_answer(query: str, docs: List[Any], hotel_name: str) -> st
                     score += 1
                 scored_sentences.append((score, s))
 
-    if not scored_sentences:
-        return f"**{hotel_name}** provides premium accommodations and guest services in Chennai."
+    # Only consider sentences that actually matched query keywords or domain terms
+    positive_sentences = [item for item in scored_sentences if item[0] > 0]
+    if not positive_sentences:
+        return f"I can provide rates, room categories, competitor benchmarks, events, and performance metrics for **{hotel_name}**. What specific information would you like?"
 
-    scored_sentences.sort(key=lambda x: x[0], reverse=True)
+    positive_sentences.sort(key=lambda x: x[0], reverse=True)
 
     chosen = []
     seen = set()
-    for sc, s in scored_sentences:
+    for sc, s in positive_sentences:
         clean = s.lstrip("•-*# ").strip()
-        if clean.lower() not in seen and (sc > 0 or len(chosen) == 0):
+        if clean.lower() not in seen:
             seen.add(clean.lower())
             chosen.append(clean)
             if len(chosen) >= 2:
@@ -111,13 +113,15 @@ class SingleAutonomousRevenueAgent:
 
         logger.info("agent_run_started", agent_run_id=agent_run_id, user_id=user_id, request=user_message)
 
-        # Guarantee live metrics, events, and holidays for target hotel
+        # Guarantee live metrics, events, and holidays for target hotel, and sync application knowledge base
         target_hotel_id = hotel_id or 1
         try:
             from app.agents.hotel_agent_factory import hotel_agent_factory
             hotel_agent_factory.ensure_hotel_live_data(db, target_hotel_id)
+            from app.rag.sync_service import app_knowledge_syncer
+            app_knowledge_syncer.sync_hotel_knowledge(db, target_hotel_id)
         except Exception as fac_err:
-            logger.warning("ensure_live_data_failed", error=str(fac_err))
+            logger.warning("ensure_live_data_and_sync_failed", error=str(fac_err))
 
         provider = get_llm_provider()
         tools_decl = tool_registry.get_llm_tool_declarations()
@@ -165,8 +169,38 @@ class SingleAutonomousRevenueAgent:
         hotel_name = hotel_obj.hotel_name if hotel_obj else f"Hotel Property {target_hotel_id}"
 
         user_lower = user_message.lower()
+
+        # Conversational Context Resolution: Resolve follow-up queries (e.g. "provide me the list?")
+        recent_history = agent_memory_manager.get_conversation_history(sess_id)
+        last_turn_text = ""
+        if len(recent_history) >= 2:
+            prior_messages = [m["content"] for m in recent_history[:-1]]
+            last_turn_text = " ".join(prior_messages[-3:]).lower()
+
+        is_followup_list = (
+            any(k in user_lower for k in [
+                "provide me the list", "give me the list", "show me the list",
+                "what is the list", "list them", "the list?", "the list", "give list",
+                "show list", "tell me the list", "provide list", "share list", "send list",
+                "which are they", "what are they", "who are they", "which ones", "names please"
+            ])
+            or (("list" in user_lower or "name" in user_lower or "who" in user_lower) and len(user_lower.split()) <= 5)
+        )
+
+        is_competitor_names_query = (
+            any(k in user_lower for k in [
+                "competitors name", "competitor name", "competitors names", "competitor names",
+                "list out competitors", "list out competitor", "list competitors", "list competitor",
+                "competitor list", "competitors list", "who are competitors", "who are our competitors",
+                "names of competitors", "names of competitor", "which competitors", "comp set", "all competitor",
+                "all competitors"
+            ])
+            or (is_followup_list and any(k in last_turn_text for k in ["competitor", "rival", "comp", "orange"]))
+        )
+
         is_events_query = (
-            "get_events_holidays" in tool_results
+            (is_followup_list and any(k in last_turn_text for k in ["event", "festival", "holiday", "summit", "conference", "golu", "navratri"]))
+            or "get_events_holidays" in tool_results
             or "get_event_data" in tool_results
             or "get_holiday_data" in tool_results
             or any(k in user_lower for k in [
@@ -179,17 +213,25 @@ class SingleAutonomousRevenueAgent:
             "total room", "total rooms", "how many room", "how many rooms",
             "hotel capacity", "room capacity", "property capacity", "number of room", "number of rooms"
         ])
-        is_room_query = "get_room_types" in tool_results or any(k in user_lower for k in [
-            "room type", "room types", "room category", "room categories",
-            "room name", "room names", "inventory", "suite", "suites",
-            "baseline rate", "baseline rates", "base rate", "base rates"
-        ])
+        is_room_query = (
+            (is_followup_list and any(k in last_turn_text for k in ["room", "suite", "inventory", "category", "baseline", "type"]))
+            or "get_room_types" in tool_results
+            or any(k in user_lower for k in [
+                "room type", "room types", "room category", "room categories",
+                "room name", "room names", "inventory", "suite", "suites",
+                "baseline rate", "baseline rates", "base rate", "base rates"
+            ])
+        )
         is_pricing_query = any(k in user_lower for k in [
             "price", "rate", "cost", "tariff", "fix", "recommend", "charge", "pricing", "how much", "dynamic rate"
         ])
-        is_competitor_query = "get_competitor_rates" in tool_results or any(k in user_lower for k in [
-            "competitor", "market median", "comp set", "rival", "rate gap", "price gap", "parity"
-        ])
+        is_competitor_query = (
+            is_competitor_names_query
+            or "get_competitor_rates" in tool_results
+            or any(k in user_lower for k in [
+                "competitor", "competitors", "market median", "comp set", "rival", "rivals", "rate gap", "price gap", "parity"
+            ])
+        )
         is_forecast_query = "run_demand_forecast" in tool_results or any(k in user_lower for k in [
             "forecast", "occupancy projection", "predicted occupancy", "pace", "pickup"
         ])
@@ -250,15 +292,37 @@ class SingleAutonomousRevenueAgent:
             else:
                 answer_content = f"**{hotel_name}** has standard room inventory configured."
 
-        # Priority 4: Competitor Rates Benchmark
+        # Priority 4: Competitor Intelligence & Competitor Names List
         elif is_competitor_query:
-            res = tool_results.get("get_competitor_rates", {})
-            my_rate = res.get('my_rate', 6500)
-            comp_med = res.get('competitor_median', 6200)
-            answer_content = (
-                f"**Competitor Rates ({hotel_name}):**\n"
-                f"• **Our Active Rate**: ₹{my_rate:,.0f} | **Market Median**: ₹{comp_med:,.0f}"
-            )
+            from app.models.rates import CompetitorHotels, CompetitorRates
+            comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == target_hotel_id, CompetitorHotels.status == "ACTIVE").all()
+            if not comps:
+                from app.agents.hotel_agent_factory import hotel_agent_factory
+                hotel_agent_factory.ensure_hotel_live_data(db, target_hotel_id)
+                comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == target_hotel_id, CompetitorHotels.status == "ACTIVE").all()
+
+            if is_competitor_names_query:
+                lines = []
+                for c in comps:
+                    latest_cr = (
+                        db.query(CompetitorRates)
+                        .filter(CompetitorRates.competitor_id == c.competitor_id)
+                        .order_by(CompetitorRates.stay_date.desc())
+                        .first()
+                    )
+                    rate_str = f" — Rate: ₹{latest_cr.rate:,.0f} ({latest_cr.ota_name or 'OTA'})" if latest_cr else ""
+                    lines.append(f"• **{c.competitor_name}** ({c.star_rating:.0f}★, {c.city}){rate_str}")
+                answer_content = f"**Competitors for {hotel_name} ({hotel_obj.city if hotel_obj else 'Chennai'}):**\n" + "\n".join(lines)
+            else:
+                res = tool_results.get("get_competitor_rates", {})
+                my_rate = res.get('my_rate', 6500)
+                comp_med = res.get('competitor_median', 6200)
+                comp_names_str = ", ".join([c.competitor_name for c in comps[:3]]) if comps else "Local Set"
+                answer_content = (
+                    f"**Competitor Rates ({hotel_name}):**\n"
+                    f"• **Our Active Rate**: ₹{my_rate:,.0f} | **Market Median**: ₹{comp_med:,.0f}\n"
+                    f"• **Active Competitors**: {comp_names_str}"
+                )
 
         # Priority 5: Demand Forecast
         elif is_forecast_query:

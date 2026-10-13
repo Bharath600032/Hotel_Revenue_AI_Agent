@@ -31,8 +31,10 @@ async def lifespan(app: FastAPI):
     try:
         db = SessionLocal()
         init_db(db)
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_all_hotels(db)
         db.close()
-        logger.info("startup_init_db_completed")
+        logger.info("startup_init_db_and_knowledge_sync_completed")
     except Exception as e:
         logger.warning("startup_init_db_failed", error=str(e))
     yield

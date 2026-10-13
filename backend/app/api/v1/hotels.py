@@ -35,7 +35,13 @@ async def create_hotel(
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
 ):
     """Create a new property master record."""
-    return hotel_service.create_hotel(db, hotel_in=payload, user_id=current_user.user_id)
+    created = hotel_service.create_hotel(db, hotel_in=payload, user_id=current_user.user_id)
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_hotel_knowledge(db, created.hotel_id)
+    except Exception:
+        pass
+    return created
 
 
 @router.get("/{hotel_id}", response_model=HotelResponse)
@@ -58,7 +64,13 @@ async def update_hotel(
 ):
     """Update hotel master profile."""
     verify_hotel_access(hotel_id, current_user, db)
-    return hotel_service.update_hotel(db, hotel_id=hotel_id, hotel_in=payload, user_id=current_user.user_id)
+    updated = hotel_service.update_hotel(db, hotel_id=hotel_id, hotel_in=payload, user_id=current_user.user_id)
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_hotel_knowledge(db, hotel_id)
+    except Exception:
+        pass
+    return updated
 
 
 @router.delete("/{hotel_id}", status_code=status.HTTP_200_OK)
@@ -95,7 +107,13 @@ async def create_room_type(
 ):
     """Create a new room type for a hotel."""
     verify_hotel_access(hotel_id, current_user, db)
-    return hotel_service.create_room_type(db, hotel_id=hotel_id, rt_in=payload, user_id=current_user.user_id)
+    rt = hotel_service.create_room_type(db, hotel_id=hotel_id, rt_in=payload, user_id=current_user.user_id)
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_hotel_knowledge(db, hotel_id)
+    except Exception:
+        pass
+    return rt
 
 
 @router.put("/{hotel_id}/room-types/{room_type_id}", response_model=RoomTypeResponse)
@@ -108,7 +126,13 @@ async def update_room_type(
 ):
     """Update room type details."""
     verify_hotel_access(hotel_id, current_user, db)
-    return hotel_service.update_room_type(db, hotel_id=hotel_id, room_type_id=room_type_id, rt_in=payload, user_id=current_user.user_id)
+    updated_rt = hotel_service.update_room_type(db, hotel_id=hotel_id, room_type_id=room_type_id, rt_in=payload, user_id=current_user.user_id)
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_hotel_knowledge(db, hotel_id)
+    except Exception:
+        pass
+    return updated_rt
 
 
 @router.delete("/{hotel_id}/room-types/{room_type_id}", status_code=status.HTTP_200_OK)
@@ -121,6 +145,11 @@ async def delete_room_type(
     """Delete a room type and associated inventory/forecast records."""
     verify_hotel_access(hotel_id, current_user, db)
     hotel_service.delete_room_type(db, hotel_id=hotel_id, room_type_id=room_type_id, user_id=current_user.user_id)
+    try:
+        from app.rag.sync_service import app_knowledge_syncer
+        app_knowledge_syncer.sync_hotel_knowledge(db, hotel_id)
+    except Exception:
+        pass
     return {"status": "DELETED", "room_type_id": room_type_id}
 
 

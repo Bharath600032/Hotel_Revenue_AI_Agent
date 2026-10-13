@@ -79,3 +79,16 @@ async def search_knowledge_base(
         results=results,
     )
 
+
+@router.post("/sync", status_code=status.HTTP_200_OK)
+async def sync_application_knowledge(
+    hotel_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager"])),
+):
+    """Synchronize live application database state into vector store knowledge base."""
+    from app.rag.sync_service import app_knowledge_syncer
+    if hotel_id:
+        return app_knowledge_syncer.sync_hotel_knowledge(db, hotel_id)
+    return app_knowledge_syncer.sync_all_hotels(db)
+

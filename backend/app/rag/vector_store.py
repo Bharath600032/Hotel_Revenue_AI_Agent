@@ -156,7 +156,7 @@ class VectorStoreManager:
 
         for doc in self._docs_in_memory:
             doc_hid = int(doc["hotel_id"]) if doc.get("hotel_id") is not None else None
-            if target_hid and doc_hid and doc_hid != target_hid:
+            if target_hid is not None and doc_hid is not None and doc_hid != target_hid:
                 continue
 
             doc_embed = doc["embedding"]
@@ -165,7 +165,11 @@ class VectorStoreManager:
             
             # Cosine similarity
             sim = float(np.dot(query_embed, doc_embed))
-            results.append((sim, doc))
+            if target_hid is not None and doc_hid == target_hid:
+                sim += 0.05  # Property-specific boost
+
+            if sim > 0.05:
+                results.append((sim, doc))
 
         results.sort(key=lambda x: x[0], reverse=True)
         top_results = results[:top_k]
