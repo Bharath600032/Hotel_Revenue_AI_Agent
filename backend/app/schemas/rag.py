@@ -19,7 +19,9 @@ class DocumentChunkResponse(BaseModel):
     title: str
     category: str
     chunk: str
+    content: Optional[str] = None
     score: float
+    similarity_score: Optional[float] = None
     source: str
 
 

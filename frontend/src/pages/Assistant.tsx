@@ -236,17 +236,126 @@ export const Assistant: React.FC = () => {
 
     // Intent 3: Events, Festivals, Holidays & Dates Query
     if (isEventsQuery) {
+      const isNov = qLower.includes('november') || qLower.includes('nov');
+      const isOct = qLower.includes('october') || qLower.includes('oct');
+      const isDec = qLower.includes('december') || qLower.includes('dec');
+
+      const wantsHols = qLower.includes('holiday') || qLower.includes('holidays');
+      const wantsEvs = qLower.includes('event') || qLower.includes('events') || qLower.includes('festival') || qLower.includes('summit') || qLower.includes('conference');
+      const scope = wantsHols && !wantsEvs ? 'HOLIDAYS_ONLY' : wantsEvs && !wantsHols ? 'EVENTS_ONLY' : 'BOTH';
+
+      if (isNov) {
+        if (scope === 'HOLIDAYS_ONLY') {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Public Holidays in November 2026:**\n` +
+              `• **Diwali Festival of Lights**: Sunday, November 01, 2026 (National) — Demand Impact: **1.40x**\n` +
+              `• **Guru Nanak Jayanti**: Tuesday, November 24, 2026 (National) — Demand Impact: **1.25x**`,
+          };
+        } else if (scope === 'EVENTS_ONLY') {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Events & Conferences in ${hotelCity} for November 2026:**\n` +
+              `• **Diwali Festive Shopping & Cultural Gala**: 2026-11-01 to 2026-11-05 (Venue: Citywide & T. Nagar Shopping Hubs) — Demand Impact: **1.40x**\n` +
+              `• **Chennai International Automobile & EV Expo**: 2026-11-18 to 2026-11-21 (Venue: Chennai Trade Centre) — Demand Impact: **1.25x**`,
+          };
+        } else {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Public Holidays in November 2026:**\n` +
+              `• **Diwali Festival of Lights**: Sunday, November 01, 2026 (National) — Demand Impact: **1.40x**\n` +
+              `• **Guru Nanak Jayanti**: Tuesday, November 24, 2026 (National) — Demand Impact: **1.25x**\n\n` +
+              `**Events in ${hotelCity} for November 2026:**\n` +
+              `• **Diwali Festive Shopping & Cultural Gala**: 2026-11-01 to 2026-11-05 (Venue: Citywide & T. Nagar Shopping Hubs) — Demand Impact: **1.40x**\n` +
+              `• **Chennai International Automobile & EV Expo**: 2026-11-18 to 2026-11-21 (Venue: Chennai Trade Centre) — Demand Impact: **1.25x**`,
+          };
+        }
+      }
+
+      if (isOct) {
+        if (scope === 'HOLIDAYS_ONLY') {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Public Holidays in October 2026:**\n` +
+              `• **Navratri Golu / Vijayadashami**: Monday, October 19, 2026 (Tamil Nadu) — Demand Impact: **1.30x**`,
+          };
+        } else if (scope === 'EVENTS_ONLY') {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Events & Conferences in ${hotelCity} for October 2026:**\n` +
+              `• **Navratri Golu Festival & Cultural Utsavam**: 2026-10-10 to 2026-10-19 (Venue: Mylapore Kapaleeshwarar & City Temples) — Demand Impact: **1.35x**\n` +
+              `• **Grand South Indian & Chettinad Food Festival**: 2026-10-15 to 2026-10-25 (Venue: Island Grounds, Chennai) — Demand Impact: **1.20x**\n` +
+              `• **Chennai International Tech Summit**: 2026-10-18 to 2026-10-22 (Venue: Chennai Trade Centre) — Demand Impact: **1.25x**`,
+          };
+        } else {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Public Holidays in October 2026:**\n` +
+              `• **Navratri Golu / Vijayadashami**: Monday, October 19, 2026 (Tamil Nadu) — Demand Impact: **1.30x**\n\n` +
+              `**Events in ${hotelCity} for October 2026:**\n` +
+              `• **Navratri Golu Festival & Cultural Utsavam**: 2026-10-10 to 2026-10-19\n` +
+              `• **Chennai International Tech Summit**: 2026-10-18 to 2026-10-22`,
+          };
+        }
+      }
+
+      if (isDec) {
+        if (scope === 'HOLIDAYS_ONLY') {
+          return {
+            id: `asst_${Date.now()}`,
+            sender: 'assistant',
+            content:
+              `**Public Holidays in December 2026:**\n` +
+              `• **Christmas Holiday Season**: Friday, December 25, 2026 (National) — Demand Impact: **1.30x**\n` +
+              `• **New Year's Eve Celebration**: Thursday, December 31, 2026 (National) — Demand Impact: **1.50x**`,
+          };
+        }
+      }
+
       if (qLower.includes('navratri') || qLower.includes('golu')) {
         return {
           id: `asst_${Date.now()}`,
           sender: 'assistant',
-          content: `**Navratri Golu Festival (${hotelCity})** is scheduled from **October 10, 2026 to October 19, 2026** (Venue: Mylapore Kapaleeshwarar & City Temples).`,
+          content: `**Navratri Golu Festival (${hotelCity})** is scheduled from **October 10, 2026 to October 19, 2026** (Venue: Mylapore Kapaleeshwarar & City Temples) — Demand Impact: **1.35x**.`,
         };
       } else if (qLower.includes('diwali')) {
         return {
           id: `asst_${Date.now()}`,
           sender: 'assistant',
-          content: `**Diwali Festival (${hotelCity})** is scheduled from **November 01, 2026 to November 05, 2026**.`,
+          content: `**Diwali Festival of Lights** is on **Sunday, November 01, 2026** (National Holiday) — Demand Impact: **1.40x**.`,
+        };
+      } else if (scope === 'HOLIDAYS_ONLY') {
+        return {
+          id: `asst_${Date.now()}`,
+          sender: 'assistant',
+          content:
+            `**Upcoming Holidays:**\n` +
+            `• **Navratri Golu / Vijayadashami**: Monday, October 19, 2026 (Tamil Nadu)\n` +
+            `• **Diwali Festival of Lights**: Sunday, November 01, 2026 (National)\n` +
+            `• **Guru Nanak Jayanti**: Tuesday, November 24, 2026 (National)\n` +
+            `• **Christmas Holiday Season**: Friday, December 25, 2026 (National)`,
+        };
+      } else if (scope === 'EVENTS_ONLY') {
+        return {
+          id: `asst_${Date.now()}`,
+          sender: 'assistant',
+          content:
+            `**Upcoming Events in ${hotelCity}:**\n` +
+            `• **Navratri Golu Festival & Cultural Utsavam**: Oct 10 – Oct 19, 2026\n` +
+            `• **International Tech Summit**: Oct 18 – Oct 22, 2026\n` +
+            `• **Diwali Festive Shopping & Cultural Gala**: Nov 01 – Nov 05, 2026`,
         };
       } else {
         return {
@@ -255,8 +364,10 @@ export const Assistant: React.FC = () => {
           content:
             `**Upcoming Events in ${hotelCity}:**\n` +
             `• **Navratri Golu Festival**: Oct 10 – Oct 19, 2026\n` +
-            `• **International Tech Summit**: Oct 18 – Oct 22, 2026\n` +
-            `• **Diwali Festival**: Nov 01 – Nov 05, 2026`,
+            `• **International Tech Summit**: Oct 18 – Oct 22, 2026\n\n` +
+            `**Upcoming Holidays:**\n` +
+            `• **Diwali Festival of Lights**: Sunday, Nov 01, 2026\n` +
+            `• **Christmas Holiday Season**: Friday, Dec 25, 2026`,
         };
       }
     }

@@ -45,7 +45,7 @@ class VectorStoreManager:
             logger.warning("vector_store_save_failed", error=str(e))
 
     def _load_from_disk(self):
-        """Load persisted document chunks from disk if available."""
+        """Load persisted document chunks from disk and ensure embeddings are up to date."""
         if not self._storage_path.exists():
             return
         try:
@@ -57,25 +57,53 @@ class VectorStoreManager:
                     doc["embedding"] = np.array(doc["embedding"], dtype=np.float32)
                 loaded.append(doc)
             self._docs_in_memory = loaded
+            # Recompute semantic embeddings to guarantee high precision
+            self.recompute_all_embeddings()
             logger.info("vector_store_loaded_from_disk", path=str(self._storage_path), docs_count=len(loaded))
         except Exception as e:
             logger.warning("vector_store_load_failed", error=str(e))
 
+    def recompute_all_embeddings(self):
+        """Re-generate semantic embeddings for all in-memory chunks and persist."""
+        if not self._docs_in_memory:
+            return
+        chunks = [d["chunk"] for d in self._docs_in_memory]
+        embeddings = embedding_generator.generate_embeddings(chunks)
+        for doc, embed in zip(self._docs_in_memory, embeddings):
+            doc["embedding"] = np.array(embed, dtype=np.float32)
+        self._save_to_disk()
+
     @staticmethod
     def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
         """
-        Split text into character/word chunks of specified length with overlap.
+        Split text into chunks of specified word length while preserving newlines and structure.
         """
-        words = text.split()
-        if not words:
+        if not text or not text.strip():
             return []
 
+        words = text.split()
+        if len(words) <= chunk_size:
+            return [text.strip()]
+
+        # For long documents, break into line-aware chunks preserving formatting
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
         chunks = []
-        step = max(1, chunk_size - overlap)
-        for i in range(0, len(words), step):
-            chunk_words = words[i : i + chunk_size]
-            chunks.append(" ".join(chunk_words))
-        return chunks
+        current_chunk = []
+        current_words = 0
+
+        for line in lines:
+            line_words = len(line.split())
+            if current_words + line_words > chunk_size and current_chunk:
+                chunks.append("\n".join(current_chunk))
+                current_chunk = current_chunk[-max(1, overlap // 20):]
+                current_words = sum(len(l.split()) for l in current_chunk)
+            current_chunk.append(line)
+            current_words += line_words
+
+        if current_chunk:
+            chunks.append("\n".join(current_chunk))
+
+        return chunks or [text.strip()]
 
     def ingest_document(
         self,
@@ -114,7 +142,7 @@ class VectorStoreManager:
                     "hotel_id": target_hid,
                     "version": version,
                     "chunk": chunk,
-                    "embedding": embed,
+                    "embedding": np.array(embed, dtype=np.float32),
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
@@ -122,7 +150,6 @@ class VectorStoreManager:
         self._save_to_disk()
         logger.info("document_ingested_incremental", title=title, hotel_id=target_hid, chunks_count=len(chunks))
         return chunk_ids
-
 
     def get_hotel_documents(self, hotel_id: Optional[int] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """Fetch all indexed document chunks matching a specific hotel_id."""
@@ -141,18 +168,26 @@ class VectorStoreManager:
         return res
 
     def search_similar(
-        self, query: str, hotel_id: Optional[int] = None, top_k: int = 3
+        self, query: str, hotel_id: Optional[int] = None, top_k: int = 5
     ) -> List[DocumentChunkResponse]:
         """
-        Execute cosine similarity search over vectorized document chunks.
+        Execute hybrid semantic similarity and lexical relevance search over vectorized document chunks.
         """
         if not self._docs_in_memory:
             return []
 
-        query_embed = embedding_generator.generate_embeddings([query])[0]
-        results = []
+        query_embed = np.array(embedding_generator.generate_embeddings([query])[0], dtype=np.float32)
+        query_lower = query.lower()
+        stop_words = {
+            "what", "is", "the", "are", "do", "you", "have", "in", "for", "to",
+            "of", "and", "a", "an", "this", "that", "these", "those", "how", "can",
+            "me", "at", "by", "from", "on", "with", "about", "as", "offer", "offers",
+            "tell", "show", "give", "please", "hotel"
+        }
+        query_words = [w for w in re.findall(r'[a-zA-Z0-9]+', query_lower) if w not in stop_words and len(w) >= 3]
 
         target_hid = int(hotel_id) if hotel_id is not None else None
+        results = []
 
         for doc in self._docs_in_memory:
             doc_hid = int(doc["hotel_id"]) if doc.get("hotel_id") is not None else None
@@ -162,14 +197,53 @@ class VectorStoreManager:
             doc_embed = doc["embedding"]
             if isinstance(doc_embed, list):
                 doc_embed = np.array(doc_embed, dtype=np.float32)
-            
-            # Cosine similarity
-            sim = float(np.dot(query_embed, doc_embed))
-            if target_hid is not None and doc_hid == target_hid:
-                sim += 0.05  # Property-specific boost
 
-            if sim > 0.05:
-                results.append((sim, doc))
+            # Cosine similarity
+            cos_sim = float(np.dot(query_embed, doc_embed))
+            cos_sim = max(0.0, min(1.0, cos_sim))
+
+            # Lexical keyword & topic match
+            doc_text = f"{doc.get('title', '')} {doc.get('category', '')} {doc.get('chunk', '')}".lower()
+            keyword_score = 0.0
+            if query_words:
+                matched_kw = sum(1 for kw in query_words if kw in doc_text)
+                keyword_score = matched_kw / len(query_words)
+
+            # Concept boosts & penalties to guarantee appropriate topical match
+            concept_boost = 0.0
+            if any(k in query_lower for k in ["amenit", "facilit", "pool", "gym", "wifi", "parking", "service"]):
+                if any(k in doc_text for k in ["amenit", "facilit", "pool", "gym", "wifi", "parking"]):
+                    concept_boost = 0.35
+                elif "holiday" in doc.get("category", "").lower() or "holiday" in doc.get("title", "").lower():
+                    # Strongly penalize holiday documents when asking about hotel amenities
+                    concept_boost = -0.50
+
+            elif any(k in query_lower for k in ["room", "suite", "bed", "inventory", "category"]):
+                if any(k in doc_text for k in ["room", "suite", "inventory", "deluxe", "superior"]):
+                    concept_boost = 0.35
+
+            elif any(k in query_lower for k in ["din", "restaurant", "food", "breakfast", "buffet"]):
+                if any(k in doc_text for k in ["restaurant", "dining", "cuisine", "buffet", "food"]):
+                    concept_boost = 0.35
+
+            elif any(k in query_lower for k in ["competitor", "rate", "price", "rival", "benchmark"]):
+                if any(k in doc_text for k in ["competitor", "rate", "benchmark", "median"]):
+                    concept_boost = 0.35
+
+            elif any(k in query_lower for k in ["holiday", "festival", "diwali", "pongal"]):
+                if any(k in doc_text for k in ["holiday", "festival", "observance"]):
+                    concept_boost = 0.35
+
+            # Property-specific boost
+            hotel_boost = 0.05 if (target_hid is not None and doc_hid == target_hid) else 0.0
+
+            # Final hybrid score: normalized between 0.0 and 1.0
+            final_score = (0.50 * cos_sim) + (0.35 * keyword_score) + concept_boost + hotel_boost
+            final_score = max(0.0, min(0.99, final_score))
+
+            # Filter out irrelevant documents
+            if final_score >= 0.25:
+                results.append((final_score, doc))
 
         results.sort(key=lambda x: x[0], reverse=True)
         top_results = results[:top_k]
@@ -178,12 +252,14 @@ class VectorStoreManager:
             DocumentChunkResponse(
                 document_id=doc["document_id"],
                 title=doc["title"],
-                category=doc["category"],
+                category=doc.get("category", "General"),
                 chunk=doc["chunk"],
-                score=round(float(sim), 4),
-                source=f"{doc['title']} (v{doc['version']})",
+                content=doc["chunk"],
+                score=round(float(score), 4),
+                similarity_score=round(float(score), 4),
+                source=f"{doc['title']} (v{doc.get('version', '1.0.0')})",
             )
-            for sim, doc in top_results
+            for score, doc in top_results
         ]
 
 

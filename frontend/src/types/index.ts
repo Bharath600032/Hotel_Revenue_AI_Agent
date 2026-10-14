@@ -224,11 +224,15 @@ export interface AuditLogItem {
 }
 
 export interface RAGSearchResult {
-  chunk_id: string;
+  chunk_id?: string;
+  document_id?: string;
   title: string;
   category: string;
-  content: string;
-  similarity_score: number;
+  content?: string;
+  chunk?: string;
+  similarity_score?: number;
+  score?: number;
+  source?: string;
 }
 
 export interface DailyWeatherForecast {
