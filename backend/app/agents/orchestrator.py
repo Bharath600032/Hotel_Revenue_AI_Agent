@@ -248,33 +248,92 @@ class SingleAutonomousRevenueAgent:
 
             matched_evs = res_ev.get("matched_events", [])
             matched_hols = res_ev.get("matched_holidays", [])
+            upcoming_evs = res_ev.get("upcoming_events", [])
+            upcoming_hols = res_ev.get("upcoming_holidays", [])
             city_name = res_ev.get("city") or (hotel_obj.city if hotel_obj else "Chennai")
+            scope = res_ev.get("scope")
+            target_month_name = res_ev.get("target_month_name")
+            target_year = res_ev.get("target_year") or 2026
 
-            if matched_evs:
-                ev_lines = []
-                for ev in matched_evs:
-                    v_str = f" (Venue: {ev['venue']})" if ev.get('venue') else ""
-                    ev_lines.append(f"**{ev['event_name']} ({ev.get('city', city_name)})** is scheduled from **{ev['start_date']} to {ev['end_date']}**{v_str}.")
-                answer_content = "\n\n".join(ev_lines)
-            elif matched_hols:
-                hol_lines = []
-                for hol in matched_hols:
-                    reg_str = f" ({hol.get('region')})" if hol.get('region') else ""
-                    hol_lines.append(f"**{hol['holiday_name']}**{reg_str} is on **{hol['holiday_date']}**.")
-                answer_content = "\n\n".join(hol_lines)
+            if not scope or not target_month_name:
+                from app.core.llm import parse_temporal_intent
+                t_intent = parse_temporal_intent(user_message)
+                scope = scope or t_intent.get("scope", "BOTH")
+                target_month_name = target_month_name or t_intent.get("target_month_name")
+                target_year = target_year or t_intent.get("target_year", 2026)
+
+            def _fmt_date(dt_str: str) -> str:
+                try:
+                    d = datetime.strptime(dt_str, "%Y-%m-%d")
+                    return d.strftime("%A, %B %d, %Y")
+                except Exception:
+                    return dt_str
+
+            def _fmt_hol(h: Dict[str, Any]) -> str:
+                d_str = _fmt_date(h.get("holiday_date", ""))
+                reg = h.get("region") or h.get("holiday_type")
+                reg_str = f" ({reg})" if reg else ""
+                impact = h.get("impact_factor")
+                imp_str = f" — Demand Impact: **{impact:.2f}x**" if impact else ""
+                return f"• **{h.get('holiday_name')}**: {d_str}{reg_str}{imp_str}"
+
+            def _fmt_ev(e: Dict[str, Any]) -> str:
+                s_date = e.get("start_date", "")
+                e_date = e.get("end_date", "")
+                d_range = f"{s_date} to {e_date}" if s_date != e_date else s_date
+                venue = f" (Venue: {e['venue']})" if e.get("venue") else ""
+                impact = e.get("impact_factor")
+                imp_str = f" — Demand Impact: **{impact:.2f}x**" if impact else ""
+                return f"• **{e.get('event_name')}**: {d_range}{venue}{imp_str}"
+
+            # Branch 1: User requested a specific month (e.g. November)
+            if target_month_name:
+                if scope == "HOLIDAYS_ONLY":
+                    if matched_hols:
+                        lines = [_fmt_hol(h) for h in matched_hols]
+                        answer_content = f"**Public Holidays in {target_month_name} {target_year}:**\n" + "\n".join(lines)
+                    else:
+                        answer_content = f"There are no official public holidays registered for **{target_month_name} {target_year}**."
+                elif scope == "EVENTS_ONLY":
+                    if matched_evs:
+                        lines = [_fmt_ev(e) for e in matched_evs]
+                        answer_content = f"**Events & Conferences in {city_name} for {target_month_name} {target_year}:**\n" + "\n".join(lines)
+                    else:
+                        answer_content = f"There are no major city events or conferences registered for **{city_name}** in **{target_month_name} {target_year}**."
+                else:  # BOTH
+                    sections = []
+                    if matched_hols:
+                        h_lines = [_fmt_hol(h) for h in matched_hols]
+                        sections.append(f"**Public Holidays in {target_month_name} {target_year}:**\n" + "\n".join(h_lines))
+                    if matched_evs:
+                        e_lines = [_fmt_ev(e) for e in matched_evs]
+                        sections.append(f"**Events in {city_name} for {target_month_name} {target_year}:**\n" + "\n".join(e_lines))
+                    if sections:
+                        answer_content = "\n\n".join(sections)
+                    else:
+                        answer_content = f"No events or holidays scheduled for **{target_month_name} {target_year}**."
+
+            # Branch 2: Specific keyword match (e.g. "when is Diwali?", "Navratri dates?")
+            elif matched_hols and scope != "EVENTS_ONLY":
+                lines = [_fmt_hol(h) for h in matched_hols]
+                answer_content = "\n".join(lines)
+            elif matched_evs and scope != "HOLIDAYS_ONLY":
+                lines = [_fmt_ev(e) for e in matched_evs]
+                answer_content = "\n".join(lines)
+
+            # Branch 3: General upcoming request (no month specified)
             else:
-                up_evs = res_ev.get("upcoming_events", [])
-                up_hols = res_ev.get("upcoming_holidays", [])
                 lines = []
-                if up_evs:
+                if scope != "HOLIDAYS_ONLY" and upcoming_evs:
                     lines.append(f"**Upcoming Events in {city_name}:**")
-                    for ev in up_evs[:3]:
+                    for ev in upcoming_evs[:3]:
                         lines.append(f"• **{ev['event_name']}**: {ev['start_date']} – {ev['end_date']}")
-                if up_hols:
+                if scope != "EVENTS_ONLY" and upcoming_hols:
                     lines.append(f"**Upcoming Holidays:**")
-                    for hol in up_hols[:3]:
-                        lines.append(f"• **{hol['holiday_name']}**: {hol['holiday_date']}")
-                answer_content = "\n".join(lines) if lines else f"No upcoming events registered for {city_name}."
+                    for hol in upcoming_hols[:3]:
+                        d_str = _fmt_date(hol.get("holiday_date", ""))
+                        lines.append(f"• **{hol['holiday_name']}**: {d_str}")
+                answer_content = "\n".join(lines) if lines else f"No upcoming events or holidays found for {city_name}."
 
         # Priority 2: Total Rooms / Hotel Capacity
         elif is_capacity_query or ("get_hotel_profile" in tool_results and not is_pricing_query):

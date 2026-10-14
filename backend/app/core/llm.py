@@ -7,43 +7,120 @@ from app.core.logging import get_logger
 logger = get_logger("app.core.llm")
 
 
+
+MONTHS_NAME_MAP = {
+    1: "January", 2: "February", 3: "March", 4: "April",
+    5: "May", 6: "June", 7: "July", 8: "August",
+    9: "September", 10: "October", 11: "November", 12: "December"
+}
+
+MONTHS_KEY_MAP = {
+    'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+    'apr': 4, 'april': 4, 'may': 5, 'june': 6, 'jun': 6, 'jul': 7, 'july': 7,
+    'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9, 'oct': 10, 'october': 10,
+    'nov': 11, 'november': 11, 'dec': 12, 'december': 12
+}
+
+
+def parse_temporal_intent(text: str) -> Dict[str, Any]:
+    """
+    Extract accurate temporal entity, target month, target year, and scope (Holidays vs Events).
+    """
+    text_lower = text.lower()
+    today = date.today()
+
+    # 1. Determine Scope
+    wants_hols = any(w in text_lower for w in [
+        "holiday", "holidays", "observance", "observances", "public holiday", "bank holiday", "national holiday"
+    ])
+    wants_evs = any(w in text_lower for w in [
+        "event", "events", "festival", "festivals", "summit", "conference", "concert", "expo", "exhibition", "carnival", "meeting"
+    ])
+
+    if wants_hols and not wants_evs:
+        scope = "HOLIDAYS_ONLY"
+    elif wants_evs and not wants_hols:
+        scope = "EVENTS_ONLY"
+    else:
+        scope = "BOTH"
+
+    # 2. Extract Year
+    year_match = re.search(r'\b(202[4-9])\b', text_lower)
+    target_year = int(year_match.group(1)) if year_match else 2026
+
+    # 3. Extract Specific Day + Month
+    m1 = re.search(r'\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})\b', text_lower)
+    m2 = re.search(r'\b([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?\b', text_lower)
+
+    specific_day = None
+    target_month = None
+
+    if m1 and m1.group(2) in MONTHS_KEY_MAP:
+        specific_day = int(m1.group(1))
+        target_month = MONTHS_KEY_MAP[m1.group(2)]
+    elif m2 and m2.group(1) in MONTHS_KEY_MAP:
+        target_month = MONTHS_KEY_MAP[m2.group(1)]
+        specific_day = int(m2.group(2))
+    else:
+        # Check for standalone month (e.g. "month of november", "in november", "november")
+        for m_str, m_num in MONTHS_KEY_MAP.items():
+            if re.search(rf'\b{m_str}\b', text_lower):
+                target_month = m_num
+                break
+
+    # 4. Dates calculation
+    if target_month and specific_day:
+        try:
+            exact_dt = date(target_year, target_month, specific_day).strftime("%Y-%m-%d")
+            start_date = exact_dt
+            end_date = exact_dt
+        except ValueError:
+            start_date = date(target_year, target_month, 1).strftime("%Y-%m-%d")
+            end_date = (date(target_year, target_month + 1, 1) - timedelta(days=1)).strftime("%Y-%m-%d") if target_month < 12 else f"{target_year}-12-31"
+    elif target_month:
+        start_date = date(target_year, target_month, 1).strftime("%Y-%m-%d")
+        if target_month < 12:
+            end_date = (date(target_year, target_month + 1, 1) - timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            end_date = f"{target_year}-12-31"
+    elif "today" in text_lower:
+        start_date = today.strftime("%Y-%m-%d")
+        end_date = start_date
+    elif "tomorrow" in text_lower:
+        start_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+        end_date = start_date
+    elif "next week" in text_lower:
+        start_date = (today + timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = (today + timedelta(days=14)).strftime("%Y-%m-%d")
+    else:
+        start_date = today.strftime("%Y-%m-%d")
+        end_date = (today + timedelta(days=60)).strftime("%Y-%m-%d")
+
+    month_name = MONTHS_NAME_MAP.get(target_month) if target_month else None
+
+    return {
+        "scope": scope,
+        "target_month": target_month,
+        "target_month_name": month_name,
+        "target_year": target_year,
+        "specific_day": specific_day,
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+
+
 def parse_date_from_text(text: str) -> str:
     """Extract stay date YYYY-MM-DD from user query text or default to 7 days from now."""
-    text_lower = text.lower()
+    temporal = parse_temporal_intent(text)
+    if temporal.get("specific_day") and temporal.get("start_date"):
+        return temporal["start_date"]
+    if temporal.get("target_month") and temporal.get("start_date"):
+        return temporal["start_date"]
 
-    # ISO date match (2026-10-10 or 2026/10/10)
+    text_lower = text.lower()
     m_iso = re.search(r'\b(202[4-9])[-/](0[1-9]|1[0-2])[-/](0[1-9]|[12]\d|3[01])\b', text)
     if m_iso:
         return f"{m_iso.group(1)}-{m_iso.group(2)}-{m_iso.group(3)}"
-
-    months_map = {
-        'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
-        'apr': 4, 'april': 4, 'may': 5, 'june': 6, 'jun': 6, 'jul': 7, 'july': 7,
-        'aug': 8, 'august': 8, 'sep': 9, 'september': 9, 'oct': 10, 'october': 10,
-        'nov': 11, 'november': 11, 'dec': 12, 'december': 12
-    }
-
-    # Pattern 1: 10th oct 2026 or 10 october 2026 or 10 oct
-    m1 = re.search(r'\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3,9})\s*(202[4-9])?\b', text_lower)
-    if m1 and m1.group(2) in months_map:
-        day = int(m1.group(1))
-        month = months_map[m1.group(2)]
-        year = int(m1.group(3)) if m1.group(3) else 2026
-        try:
-            return date(year, month, day).strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Pattern 2: oct 10 2026 or october 20
-    m2 = re.search(r'\b([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?\s*(202[4-9])?\b', text_lower)
-    if m2 and m2.group(1) in months_map:
-        month = months_map[m2.group(1)]
-        day = int(m2.group(2))
-        year = int(m2.group(3)) if m2.group(3) else 2026
-        try:
-            return date(year, month, day).strftime("%Y-%m-%d")
-        except ValueError:
-            pass
 
     today = date.today()
     if "today" in text_lower:
@@ -82,6 +159,7 @@ class MockLLMProvider(LLMProviderInterface):
     ) -> Dict[str, Any]:
         msg_lower = user_message.lower()
         extracted_date = parse_date_from_text(user_message)
+        temporal_intent = parse_temporal_intent(user_message)
 
         # Detect follow-up list requests (e.g., "provide me the list?", "the list?", "give me the list")
         is_followup_list = any(w in msg_lower for w in [
@@ -112,8 +190,11 @@ class MockLLMProvider(LLMProviderInterface):
                         "tool_name": "get_events_holidays",
                         "arguments": {
                             "query": user_message,
-                            "start_date": extracted_date,
-                            "end_date": extracted_date,
+                            "month": temporal_intent.get("target_month"),
+                            "year": temporal_intent.get("target_year"),
+                            "scope": temporal_intent.get("scope"),
+                            "start_date": temporal_intent.get("start_date"),
+                            "end_date": temporal_intent.get("end_date"),
                         },
                     }
                 ],
