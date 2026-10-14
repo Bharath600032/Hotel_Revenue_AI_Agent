@@ -12,7 +12,6 @@ from app.models.agent_swarm import AgentSwarmMember, SwarmSessionLog
 from app.models.hotel import Hotel, RoomType
 from app.models.rates import CompetitorHotels, CompetitorRates
 from app.models.ai import Forecasts
-from app.agents.hotel_agent_factory import hotel_agent_factory
 from app.schemas.agent_swarm import (
     SwarmEvaluateRequest,
     SwarmConsensusResponse,
@@ -51,8 +50,6 @@ class AgentSwarmService:
 
     def _get_hotel_live_context(self, db: Session, hotel_id: int) -> Dict[str, Any]:
         """Fetch all live database entities for hotel, active competitors, room types, and forecasts."""
-        hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
-
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
         hotel_name = hotel.hotel_name if hotel else f"Cute Orange Hotel"
         city = hotel.city if hotel and hotel.city else "Chennai"
