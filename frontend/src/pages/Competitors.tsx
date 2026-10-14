@@ -103,10 +103,14 @@ export const Competitors: React.FC = () => {
         apiService.getCompetitors(hotelId),
         apiService.getCompetitorAnalysis(hotelId, stayDate, debouncedRate || myRate),
       ]);
-      setCompetitors(compList);
+      let finalComps = compList;
+      if (!compList || (Array.isArray(compList) && compList.length === 0)) {
+        finalComps = await apiService.populateDefaultCompetitors(hotelId);
+      }
+      setCompetitors(finalComps || []);
       setAnalysis(compAnalysis);
       try {
-        sessionStorage.setItem(`cached_competitors_${hotelId}`, JSON.stringify(compList));
+        sessionStorage.setItem(`cached_competitors_${hotelId}`, JSON.stringify(finalComps));
         sessionStorage.setItem(`cached_comp_analysis_${hotelId}`, JSON.stringify(compAnalysis));
       } catch {}
     } catch (err) {

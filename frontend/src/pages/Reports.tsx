@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { apiService } from '../services/api';
-import { FileSpreadsheet, Download, Calendar, CheckCircle } from 'lucide-react';
+import { FileSpreadsheet, Download, Calendar, CheckCircle, BookOpen, FileText, Printer, ExternalLink, Sparkles } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const [hotelId] = useState(1);
@@ -8,6 +8,8 @@ export const Reports: React.FC = () => {
   const [endDate, setEndDate] = useState('2026-12-31');
   const [downloading, setDownloading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
+  const [docDownloading, setDocDownloading] = useState<string | null>(null);
+  const [docSuccessMsg, setDocSuccessMsg] = useState(false);
 
   const generateClientExcelCsv = (start: string, end: string): Blob => {
     const startDt = new Date(start);
@@ -107,20 +109,137 @@ export const Reports: React.FC = () => {
     }
   };
 
+  const handleDownloadDoc = async (format: 'html' | 'md') => {
+    setDocDownloading(format);
+    setDocSuccessMsg(false);
+    try {
+      const blob = await apiService.downloadDocumentation(format);
+      const filename = format === 'html' ? 'Hotel_Revenue_AI_Agent_Documentation.html' : 'Hotel_Revenue_AI_Agent_Documentation.md';
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setDocSuccessMsg(true);
+    } catch (err) {
+      console.error('Failed to download documentation via API, triggering direct link:', err);
+      // Direct window trigger
+      window.open(`/api/v1/exports/documentation?format=${format}`, '_blank');
+      setDocSuccessMsg(true);
+    } finally {
+      setDocDownloading(null);
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8 max-w-4xl">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <FileSpreadsheet className="w-7 h-7 text-emerald-400" />
-          Executive Reports & Excel Export Generator
+          Executive Reports & System Documentation
         </h1>
         <p className="text-slate-400 text-sm mt-1">
-          Export formatted 365-day pricing recommendations, occupancy projections, and competitor medians.
+          Export formatted pricing spreadsheets, historical benchmarks, and complete architectural documentation.
         </p>
       </div>
 
-      {/* Report Generator Card */}
+      {/* System Documentation Card */}
+      <div className="p-8 bg-slate-900 border border-indigo-500/30 rounded-2xl space-y-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-indigo-400" />
+              Complete Application System Documentation
+            </h3>
+            <p className="text-xs text-slate-400">
+              Covers Executive Overview, 22 Tools Registry, 5-Stage Dynamic Pricing, ReAct Memory Manager, RAG Hybrid Engine, and Deployment Runbooks.
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-full border border-indigo-500/30 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            v1.0.0 Ready
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* HTML Standalone Download */}
+          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-400" />
+                <span className="text-sm font-bold text-white">Interactive HTML / PDF</span>
+              </div>
+              <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Standalone</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Self-contained formatted document with one-click "Print / Save to PDF", dark/light mode toggle, and table of contents.
+            </p>
+            <button
+              onClick={() => handleDownloadDoc('html')}
+              disabled={docDownloading !== null}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md transition-all"
+            >
+              {docDownloading === 'html' ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                  Downloading HTML...
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  Download .HTML (Printable to PDF)
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Raw Markdown Download */}
+          <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-400" />
+                <span className="text-sm font-bold text-white">Standard Markdown (.md)</span>
+              </div>
+              <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">GitHub Format</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Clean GitHub-flavored markdown file suitable for offline reading, version control, or importing into Notion/Obsidian.
+            </p>
+            <button
+              onClick={() => handleDownloadDoc('md')}
+              disabled={docDownloading !== null}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg border border-slate-700 transition-all"
+            >
+              {docDownloading === 'md' ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                  Downloading Markdown...
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  Download .MD File
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {docSuccessMsg && (
+          <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl text-indigo-300 text-xs flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            Documentation downloaded successfully! Double-click the .html file in your browser to view or print as PDF.
+          </div>
+        )}
+      </div>
+
+      {/* Excel Report Generator Card */}
       <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl space-y-6">
         <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-4">
           <Calendar className="w-5 h-5 text-indigo-400" />
@@ -183,3 +302,4 @@ export const Reports: React.FC = () => {
     </div>
   );
 };
+

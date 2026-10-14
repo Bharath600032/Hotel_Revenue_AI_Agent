@@ -8,29 +8,18 @@ import {
 } from '../types';
 import {
   TrendingUp,
-  DollarSign,
   Utensils,
   Sparkles,
   RefreshCw,
   PieChart as PieChartIcon,
   BarChart2,
-  Calendar,
-  Layers,
   CheckCircle,
   Plus,
-  ArrowUpRight,
-  ShieldCheck,
-  Tag,
   Percent,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
   Tooltip,
-  CartesianGrid,
   PieChart,
   Pie,
   Cell,
@@ -116,9 +105,11 @@ export const TRevPARAncillary: React.FC = () => {
   };
 
   const pieChartData = summary
-    ? summary.categories_breakdown.map((cat) => ({
+    ? summary.categories_breakdown.map((cat, idx) => ({
         name: cat.category,
         value: cat.revenue_amount,
+        percentage: cat.percentage_of_total_ancillary,
+        color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length],
       }))
     : [];
 
@@ -305,16 +296,45 @@ export const TRevPARAncillary: React.FC = () => {
                       outerRadius={90}
                       paddingAngle={4}
                       dataKey="value"
+                      nameKey="name"
                     >
                       {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={entry.color || CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#38bdf8', borderRadius: '10px', fontSize: '13px', color: '#ffffff', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.7)' }}
-                      itemStyle={{ color: '#38bdf8', fontWeight: 700 }}
-                      labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
-                      formatter={(val: any) => [formatINR(Number(val)), 'Revenue']}
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0];
+                          const streamName = data.payload?.name || data.name || 'Ancillary Stream';
+                          const amount = data.value;
+                          const pct = data.payload?.percentage;
+                          const sliceColor = data.payload?.color || data.color || '#10b981';
+
+                          return (
+                            <div className="bg-slate-950/95 border border-slate-700/80 px-3.5 py-2.5 rounded-xl shadow-2xl backdrop-blur-md">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: sliceColor }}
+                                />
+                                <span className="text-xs font-bold text-white tracking-wide">
+                                  {streamName}
+                                </span>
+                              </div>
+                              <div className="text-sm font-extrabold text-emerald-400 font-mono flex items-baseline gap-2">
+                                <span>{formatINR(Number(amount))}</span>
+                                {pct !== undefined && (
+                                  <span className="text-[11px] font-semibold text-slate-400">
+                                    ({pct}%)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                   </PieChart>

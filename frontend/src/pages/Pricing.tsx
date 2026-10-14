@@ -10,7 +10,7 @@ import { useHotel } from '../context/HotelContext';
 
 export const Pricing: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.hotel_id || 1;
+  const hotelId = selectedHotel?.hotel_id || Number(localStorage.getItem('selected_hotel_id')) || 4;
   const [recommendations, setRecommendations] = useState<PriceRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);

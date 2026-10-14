@@ -16,6 +16,7 @@ import {
   Scale,
   X,
   Power,
+  RefreshCw,
 } from 'lucide-react';
 import { ProvisioningPercentageLoader } from '../components/ProvisioningPercentageLoader';
 import { useHotel } from '../context/HotelContext';
@@ -223,13 +224,48 @@ export const Hotels: React.FC = () => {
     }
   };
 
-  const fetchCompetitors = async (hotelId: number) => {
+  const fetchCompetitors = async (hotelId: number, forceAutoPopulate = false) => {
     try {
       setLoadingCompetitors(true);
-      const data = await apiService.getCompetitors(hotelId);
-      setCompetitors(data);
+      // Immediately restore from cache if state is currently empty to prevent any vanishing flicker
+      if (competitors.length === 0) {
+        try {
+          const cached = sessionStorage.getItem(`cached_competitors_${hotelId}`);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCompetitors(parsed);
+            }
+          }
+        } catch {}
+      }
+
+      let data = await apiService.getCompetitors(hotelId);
+      if ((!data || (Array.isArray(data) && data.length === 0)) || forceAutoPopulate) {
+        // Automatically populate default city competitors so it never stays empty
+        data = await apiService.populateDefaultCompetitors(hotelId);
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        setCompetitors(data);
+        try {
+          sessionStorage.setItem(`cached_competitors_${hotelId}`, JSON.stringify(data));
+        } catch {}
+      } else if (Array.isArray(data)) {
+        setCompetitors(data);
+      }
     } catch (err) {
       console.error('Failed to load competitor hotels:', err);
+      // Fallback to cache on error
+      try {
+        const cached = sessionStorage.getItem(`cached_competitors_${hotelId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCompetitors(parsed);
+          }
+        }
+      } catch {}
     } finally {
       setLoadingCompetitors(false);
     }
@@ -818,20 +854,32 @@ export const Hotels: React.FC = () => {
                 </p>
               </div>
 
-              {canManageHotels && (
+              <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
                 <button
-                  onClick={() => {
-                    setCompName('');
-                    setCompCity(selectedHotel.city);
-                    setCompStar(4.0);
-                    setShowAddCompModal(true);
-                  }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all self-start md:self-auto"
+                  onClick={() => fetchCompetitors(selectedHotel.hotel_id, true)}
+                  disabled={loadingCompetitors}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Refresh competitor list"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add Competitor Hotel
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingCompetitors ? 'animate-spin text-indigo-400' : ''}`} />
+                  <span>Refresh</span>
                 </button>
-              )}
+
+                {canManageHotels && (
+                  <button
+                    onClick={() => {
+                      setCompName('');
+                      setCompCity(selectedHotel.city);
+                      setCompStar(4.0);
+                      setShowAddCompModal(true);
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Competitor Hotel
+                  </button>
+                )}
+              </div>
             </div>
 
             {loadingCompetitors ? (
@@ -839,10 +887,21 @@ export const Hotels: React.FC = () => {
                 <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-indigo-500"></div>
               </div>
             ) : competitors.length === 0 ? (
-              <div className="p-8 text-center bg-slate-950/50 rounded-2xl border border-slate-800/60 space-y-2">
+              <div className="p-8 text-center bg-slate-950/50 rounded-2xl border border-slate-800/60 space-y-4">
                 <Scale className="w-8 h-8 text-slate-600 mx-auto" />
-                <p className="text-xs font-semibold text-slate-300">No competitor hotels added yet for this property.</p>
-                <p className="text-[11px] text-slate-500">Add competitors to enable automated market median rate tracking.</p>
+                <div>
+                  <p className="text-xs font-semibold text-slate-300">No competitor hotels registered yet for this property.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Click below to automatically populate default local market competitors.</p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => fetchCompetitors(selectedHotel.hotel_id, true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Auto-Populate Competitors
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

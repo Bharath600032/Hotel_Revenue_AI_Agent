@@ -22,25 +22,66 @@ router = APIRouter(prefix="/hotels/{hotel_id}/competitors", tags=["Competitor In
 
 
 @router.get("", response_model=List[CompetitorHotelResponse])
+@router.get("/", response_model=List[CompetitorHotelResponse])
 async def list_competitor_hotels(
     hotel_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager", "Hotel Manager", "Analyst", "Read-only User"])),
 ):
     """Retrieve list of registered competitor hotels for property."""
+    try:
+        verify_hotel_access(hotel_id, current_user, db)
+        comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+        if not comps:
+            from app.models.hotel import Hotel
+            hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+            city = (hotel.city if hotel and hotel.city else "Chennai")
+            city_comps = {
+                "Chennai": ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"],
+                "Goa": ["Taj Exotica Resort Goa", "The Leela Goa", "Radisson Blu Resort Goa"],
+                "Mumbai": ["Taj Mahal Palace Mumbai", "The Oberoi Mumbai", "JW Marriott Juhu"],
+            }
+            names = city_comps.get(city, ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"])
+            for c_name in names:
+                db.add(CompetitorHotels(
+                    hotel_id=hotel_id,
+                    competitor_name=c_name,
+                    city=city,
+                    star_rating=4.0,
+                    status="ACTIVE",
+                ))
+            db.commit()
+            comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+        return comps
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"ERROR_TRACE: {str(e)}")
+
+
+@router.post("/populate-defaults", response_model=List[CompetitorHotelResponse])
+async def populate_default_competitors(
+    hotel_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["Super Admin", "Administrator", "Revenue Manager"])),
+):
+    """Ensure default competitor hotels exist for hotel property and return all."""
     verify_hotel_access(hotel_id, current_user, db)
-    comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
-    if not comps:
-        from app.models.hotel import Hotel
-        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-        city = (hotel.city if hotel and hotel.city else "Chennai")
-        city_comps = {
-            "Chennai": ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"],
-            "Goa": ["Taj Exotica Resort Goa", "The Leela Goa", "Radisson Blu Resort Goa"],
-            "Mumbai": ["Taj Mahal Palace Mumbai", "The Oberoi Mumbai", "JW Marriott Juhu"],
-        }
-        names = city_comps.get(city, ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"])
-        for c_name in names:
+    from app.models.hotel import Hotel
+    hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+    city = (hotel.city if hotel and hotel.city else "Chennai")
+    city_comps = {
+        "Chennai": ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"],
+        "Goa": ["Taj Exotica Resort Goa", "The Leela Goa", "Radisson Blu Resort Goa"],
+        "Mumbai": ["Taj Mahal Palace Mumbai", "The Oberoi Mumbai", "JW Marriott Juhu"],
+    }
+    names = city_comps.get(city, ["The Belstead Hotel", "Park Elanza", "FabHotel B Zone", "Crescent Park", "Season 4 Residences"])
+    existing = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+    existing_names = {c.competitor_name for c in existing}
+    added = False
+    for c_name in names:
+        if c_name not in existing_names:
             db.add(CompetitorHotels(
                 hotel_id=hotel_id,
                 competitor_name=c_name,
@@ -48,9 +89,12 @@ async def list_competitor_hotels(
                 star_rating=4.0,
                 status="ACTIVE",
             ))
+            added = True
+    if added:
         db.commit()
-        comps = db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
-    return comps
+    return db.query(CompetitorHotels).filter(CompetitorHotels.hotel_id == hotel_id).all()
+
+
 
 
 @router.post("", response_model=CompetitorHotelResponse, status_code=status.HTTP_201_CREATED)

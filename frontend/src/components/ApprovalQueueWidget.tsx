@@ -9,7 +9,8 @@ interface ApprovalQueueWidgetProps {
   onUpdate?: () => void;
 }
 
-export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelId = 1, refreshKey = 0, onUpdate }) => {
+export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelId, refreshKey = 0, onUpdate }) => {
+  const activeHotelId = hotelId || Number(localStorage.getItem('selected_hotel_id')) || 4;
   const [pendingItems, setPendingItems] = useState<PriceRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
 
   useEffect(() => {
     fetchPendingQueue();
-  }, [hotelId, refreshKey]);
+  }, [activeHotelId, refreshKey]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -41,7 +42,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
   const fetchPendingQueue = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getPendingApprovals(hotelId);
+      const data = await apiService.getPendingApprovals(activeHotelId);
       setPendingItems(data);
     } catch (err) {
       console.error('Failed to load pending approvals:', err);
@@ -53,7 +54,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
   const handleApprove = async (rec: PriceRecommendation) => {
     if (!rec.recommendation_id) return;
     try {
-      await apiService.approveRecommendation(hotelId, rec.recommendation_id);
+      await apiService.approveRecommendation(activeHotelId, rec.recommendation_id);
       setActionSuccess(`Approved rate ₹${rec.recommended_rate.toLocaleString()} for ${rec.stay_date}`);
       await fetchPendingQueue();
       if (onUpdate) onUpdate();
@@ -67,7 +68,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
     if (!overrideModalRec?.recommendation_id) return;
     try {
       await apiService.overrideRecommendation(
-        hotelId,
+        activeHotelId,
         overrideModalRec.recommendation_id,
         overrideRateInput,
         overrideReasonInput || 'Manager custom rate override'
@@ -86,7 +87,7 @@ export const ApprovalQueueWidget: React.FC<ApprovalQueueWidgetProps> = ({ hotelI
     if (!rejectModalRec?.recommendation_id) return;
     try {
       await apiService.rejectRecommendation(
-        hotelId,
+        activeHotelId,
         rejectModalRec.recommendation_id,
         rejectReasonInput || 'Rejected by revenue manager'
       );

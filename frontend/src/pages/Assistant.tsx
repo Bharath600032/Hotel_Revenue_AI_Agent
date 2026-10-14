@@ -624,6 +624,26 @@ export const Assistant: React.FC = () => {
                 <div className="whitespace-pre-wrap font-medium">{msg.content}</div>
               </div>
 
+              {/* Quick Documentation Download Action Buttons if message relates to docs */}
+              {msg.sender === 'assistant' && (msg.content.includes('System Documentation') || msg.content.includes('Documentation Download') || msg.content.includes('DOCUMENTATION')) && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="/api/v1/exports/documentation?format=html"
+                    download="Hotel_Revenue_AI_Agent_Documentation.html"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+                  >
+                    <span>📥</span> Download .HTML (Printable to PDF)
+                  </a>
+                  <a
+                    href="/api/v1/exports/documentation?format=md"
+                    download="Hotel_Revenue_AI_Agent_Documentation.md"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition-all"
+                  >
+                    <span>📝</span> Download .MD
+                  </a>
+                </div>
+              )}
+
               {/* Structured Recommendation Card */}
               {msg.recommendation && (
                 <div className="bg-slate-950 border border-indigo-500/30 rounded-3xl p-5 space-y-4 shadow-2xl">

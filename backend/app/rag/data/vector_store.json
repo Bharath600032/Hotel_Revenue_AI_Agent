@@ -11880,8 +11880,8 @@
     "created_at": "2026-10-13T11:20:46.504165+00:00"
   },
   {
-    "document_id": "doc_396203279d",
-    "chunk_id": "doc_396203279d_c0",
+    "document_id": "doc_a679034b75",
+    "chunk_id": "doc_a679034b75_c0",
     "title": "Hotel Profile - Cute Orange Hotel",
     "category": "Hotel Profile",
     "hotel_id": 4,
@@ -12273,11 +12273,11 @@
       -0.006315405946224928,
       0.0042102704755961895
     ],
-    "created_at": "2026-10-14T06:51:20.715904+00:00"
+    "created_at": "2026-10-14T11:24:35.387231+00:00"
   },
   {
-    "document_id": "doc_69f8da06f0",
-    "chunk_id": "doc_69f8da06f0_c0",
+    "document_id": "doc_33f3ede5a7",
+    "chunk_id": "doc_33f3ede5a7_c0",
     "title": "Competitors List & Rates - Cute Orange Hotel",
     "category": "Competitor Intel",
     "hotel_id": 4,
@@ -12669,11 +12669,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:20.859338+00:00"
+    "created_at": "2026-10-14T11:24:35.901973+00:00"
   },
   {
-    "document_id": "doc_fc4802a287",
-    "chunk_id": "doc_fc4802a287_c0",
+    "document_id": "doc_b8abf64fa8",
+    "chunk_id": "doc_b8abf64fa8_c0",
     "title": "Room Categories & Inventory - Cute Orange Hotel",
     "category": "Room Inventory",
     "hotel_id": 4,
@@ -13065,11 +13065,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:20.994231+00:00"
+    "created_at": "2026-10-14T11:24:36.390514+00:00"
   },
   {
-    "document_id": "doc_c3c2866e40",
-    "chunk_id": "doc_c3c2866e40_c0",
+    "document_id": "doc_0bf4542d6f",
+    "chunk_id": "doc_0bf4542d6f_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -13461,11 +13461,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:21.150629+00:00"
+    "created_at": "2026-10-14T11:24:36.818380+00:00"
   },
   {
-    "document_id": "doc_c3c2866e40",
-    "chunk_id": "doc_c3c2866e40_c1",
+    "document_id": "doc_0bf4542d6f",
+    "chunk_id": "doc_0bf4542d6f_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -13857,11 +13857,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:21.150629+00:00"
+    "created_at": "2026-10-14T11:24:36.818380+00:00"
   },
   {
-    "document_id": "doc_2acbe1de75",
-    "chunk_id": "doc_2acbe1de75_c0",
+    "document_id": "doc_89c3ceb846",
+    "chunk_id": "doc_89c3ceb846_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 4,
@@ -14253,11 +14253,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:21.268570+00:00"
+    "created_at": "2026-10-14T11:24:37.193893+00:00"
   },
   {
-    "document_id": "doc_2ff1bc3b8f",
-    "chunk_id": "doc_2ff1bc3b8f_c0",
+    "document_id": "doc_56dd5adabc",
+    "chunk_id": "doc_56dd5adabc_c0",
     "title": "Hotel Profile - Harrisons Hotel",
     "category": "Hotel Profile",
     "hotel_id": 5,
@@ -14649,11 +14649,11 @@
       -0.006329493597149849,
       0.004219662398099899
     ],
-    "created_at": "2026-10-14T06:51:21.391627+00:00"
+    "created_at": "2026-10-14T11:24:37.454571+00:00"
   },
   {
-    "document_id": "doc_5d4232dd1e",
-    "chunk_id": "doc_5d4232dd1e_c0",
+    "document_id": "doc_c6750809a8",
+    "chunk_id": "doc_c6750809a8_c0",
     "title": "Competitors List & Rates - Harrisons Hotel",
     "category": "Competitor Intel",
     "hotel_id": 5,
@@ -15045,11 +15045,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:21.590422+00:00"
+    "created_at": "2026-10-14T11:24:37.805547+00:00"
   },
   {
-    "document_id": "doc_414b1d493e",
-    "chunk_id": "doc_414b1d493e_c0",
+    "document_id": "doc_06f021a8b9",
+    "chunk_id": "doc_06f021a8b9_c0",
     "title": "Room Categories & Inventory - Harrisons Hotel",
     "category": "Room Inventory",
     "hotel_id": 5,
@@ -15441,11 +15441,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:21.842182+00:00"
+    "created_at": "2026-10-14T11:24:38.038685+00:00"
   },
   {
-    "document_id": "doc_92a3457fac",
-    "chunk_id": "doc_92a3457fac_c0",
+    "document_id": "doc_c777602012",
+    "chunk_id": "doc_c777602012_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -15837,11 +15837,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:22.073206+00:00"
+    "created_at": "2026-10-14T11:24:38.401322+00:00"
   },
   {
-    "document_id": "doc_92a3457fac",
-    "chunk_id": "doc_92a3457fac_c1",
+    "document_id": "doc_c777602012",
+    "chunk_id": "doc_c777602012_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -16233,11 +16233,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:22.073206+00:00"
+    "created_at": "2026-10-14T11:24:38.401322+00:00"
   },
   {
-    "document_id": "doc_1c078808bf",
-    "chunk_id": "doc_1c078808bf_c0",
+    "document_id": "doc_5eb7f76fd9",
+    "chunk_id": "doc_5eb7f76fd9_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 5,
@@ -16629,11 +16629,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:22.274833+00:00"
+    "created_at": "2026-10-14T11:24:38.650865+00:00"
   },
   {
-    "document_id": "doc_70a2faff84",
-    "chunk_id": "doc_70a2faff84_c0",
+    "document_id": "doc_0d416470c9",
+    "chunk_id": "doc_0d416470c9_c0",
     "title": "Hotel Profile - Skyline Suites",
     "category": "Hotel Profile",
     "hotel_id": 6,
@@ -17025,11 +17025,11 @@
       -0.005991907324641943,
       0.003994605038315058
     ],
-    "created_at": "2026-10-14T06:51:22.522250+00:00"
+    "created_at": "2026-10-14T11:24:38.914768+00:00"
   },
   {
-    "document_id": "doc_8f39016df4",
-    "chunk_id": "doc_8f39016df4_c0",
+    "document_id": "doc_bf10f4bbf8",
+    "chunk_id": "doc_bf10f4bbf8_c0",
     "title": "Competitors List & Rates - Skyline Suites",
     "category": "Competitor Intel",
     "hotel_id": 6,
@@ -17421,11 +17421,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:22.763987+00:00"
+    "created_at": "2026-10-14T11:24:39.250975+00:00"
   },
   {
-    "document_id": "doc_9d8379b5f9",
-    "chunk_id": "doc_9d8379b5f9_c0",
+    "document_id": "doc_b2e71542cf",
+    "chunk_id": "doc_b2e71542cf_c0",
     "title": "Room Categories & Inventory - Skyline Suites",
     "category": "Room Inventory",
     "hotel_id": 6,
@@ -17817,11 +17817,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:23.070468+00:00"
+    "created_at": "2026-10-14T11:24:39.890647+00:00"
   },
   {
-    "document_id": "doc_83881e684f",
-    "chunk_id": "doc_83881e684f_c0",
+    "document_id": "doc_d732e1eb77",
+    "chunk_id": "doc_d732e1eb77_c0",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -18213,11 +18213,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:23.303707+00:00"
+    "created_at": "2026-10-14T11:24:40.611065+00:00"
   },
   {
-    "document_id": "doc_83881e684f",
-    "chunk_id": "doc_83881e684f_c1",
+    "document_id": "doc_d732e1eb77",
+    "chunk_id": "doc_d732e1eb77_c1",
     "title": "Events & Festivals - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -18609,11 +18609,11 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:23.303707+00:00"
+    "created_at": "2026-10-14T11:24:40.611065+00:00"
   },
   {
-    "document_id": "doc_352fee8795",
-    "chunk_id": "doc_352fee8795_c0",
+    "document_id": "doc_95e588eec5",
+    "chunk_id": "doc_95e588eec5_c0",
     "title": "Public Holidays Calendar - Chennai",
     "category": "Demand Signals",
     "hotel_id": 6,
@@ -19005,6 +19005,6 @@
       0.0,
       0.0
     ],
-    "created_at": "2026-10-14T06:51:23.478102+00:00"
+    "created_at": "2026-10-14T11:24:41.171657+00:00"
   }
 ]

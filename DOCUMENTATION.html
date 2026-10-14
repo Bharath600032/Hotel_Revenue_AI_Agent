@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotel Autonomous Revenue AI Agent (KESH) — System Documentation</title>
+  <meta name="description" content="Comprehensive technical, architectural, and operational documentation for Hotel Autonomous Revenue AI Agent (KESH).">
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-surface: #0f172a;
+      --bg-card: #131d36;
+      --bg-card-hover: #1a274a;
+      --border: #1e293b;
+      --border-focus: #3b82f6;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --accent: #06b6d4;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --code-bg: #030712;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-card: #f1f5f9;
+      --bg-card-hover: #e2e8f0;
+      --border: #cbd5e1;
+      --border-focus: #2563eb;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --primary: #4338ca;
+      --primary-light: #4f46e5;
+      --accent: #0891b2;
+      --emerald: #059669;
+      --amber: #d97706;
+      --rose: #e11d48;
+      --code-bg: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Top Sticky Action Bar */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    [data-theme="light"] .top-bar {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .top-bar-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-primary { background: rgba(99, 102, 241, 0.15); color: var(--primary-light); border: 1px solid rgba(99, 102, 241, 0.3); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text);
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+    .btn-primary:hover {
+      background: var(--primary-light);
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+      padding: 2rem 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      position: sticky;
+      top: 5rem;
+      height: calc(100vh - 6rem);
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .toc-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .toc-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .toc-link {
+      display: block;
+      padding: 0.45rem 0.75rem;
+      border-radius: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border-left: 2px solid transparent;
+    }
+    .toc-link:hover {
+      color: var(--text);
+      background: var(--bg-card);
+      border-left-color: var(--primary-light);
+    }
+
+    /* Documentation Body */
+    .content {
+      min-width: 0;
+    }
+
+    .hero-header {
+      padding: 2.5rem;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%), var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+    [data-theme="light"] .hero-title {
+      color: #0f172a;
+    }
+    .hero-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 800px;
+      margin-bottom: 1.5rem;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.25rem;
+    }
+    .meta-item {
+      font-size: 0.8rem;
+    }
+    .meta-label {
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.7rem;
+    }
+    .meta-val {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Headings & Sections */
+    section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 5rem;
+    }
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    strong {
+      color: var(--text);
+    }
+    ul, ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    li {
+      margin-bottom: 0.4rem;
+    }
+
+    /* Cards & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+      transition: all 0.2s;
+    }
+    .card:hover {
+      border-color: var(--primary-light);
+      background: var(--bg-card);
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Tables */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: var(--bg-surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+    th {
+      background: var(--bg-card);
+      color: var(--text);
+      font-weight: 700;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+    }
+
+    /* Code Blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      color: #38bdf8;
+      line-height: 1.5;
+    }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--bg-card);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.3rem;
+      color: #a5b4fc;
+      border: 1px solid var(--border);
+    }
+
+    /* Callout Alert Boxes */
+    .callout {
+      border-left: 4px solid var(--primary);
+      background: rgba(79, 70, 229, 0.08);
+      padding: 1rem 1.25rem;
+      border-radius: 0 0.75rem 0.75rem 0;
+      margin: 1.25rem 0;
+    }
+    .callout-success {
+      border-left-color: var(--emerald);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .callout-warning {
+      border-left-color: var(--amber);
+      background: rgba(245, 158, 11, 0.08);
+    }
+    .callout-title {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    /* Diagram Canvas */
+    .flow-diagram {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin: 1.25rem 0;
+      overflow-x: auto;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #93c5fd;
+      line-height: 1.4;
+      white-space: pre;
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 10pt;
+      }
+      .top-bar, .sidebar, .action-group, .btn {
+        display: none !important;
+      }
+      .container {
+        display: block !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .hero-header {
+        background: #ffffff !important;
+        border: 2px solid #000000 !important;
+        color: #000000 !important;
+        padding: 1.5rem !important;
+        page-break-after: avoid;
+      }
+      .hero-title {
+        color: #000000 !important;
+        font-size: 18pt !important;
+      }
+      h2 {
+        color: #000000 !important;
+        border-bottom: 2px solid #333333 !important;
+        page-break-after: avoid;
+        margin-top: 1.5rem;
+      }
+      h3 {
+        color: #000000 !important;
+        page-break-after: avoid;
+      }
+      p, td, th, li {
+        color: #111111 !important;
+      }
+      .card, .table-wrapper, pre, .flow-diagram {
+        border: 1px solid #999999 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        page-break-inside: avoid;
+      }
+      code {
+        color: #000000 !important;
+        border: 1px solid #cccccc !important;
+        background: #eeeeee !important;
+      }
+      section {
+        page-break-inside: auto;
+      }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- Top Sticky Action Bar -->
+  <header class="top-bar">
+    <div class="top-bar-title">
+      <span>🏨</span>
+      <span>Hotel Revenue AI Agent (KESH)</span>
+      <span class="badge badge-primary">v1.0.0 Production</span>
+      <span class="badge badge-emerald">Interactive Docs</span>
+    </div>
+    <div class="action-group">
+      <button class="btn btn-primary" onclick="window.print()" title="Open Print Dialog to Save as PDF">
+        <span>🖨️</span> Print / Save as PDF
+      </button>
+      <button class="btn" onclick="downloadMarkdownFile()" title="Download as Raw Markdown (.md)">
+        <span>📝</span> Download .MD
+      </button>
+      <button class="btn" onclick="downloadHtmlFile()" title="Save standalone copy of this HTML file">
+        <span>💾</span> Save HTML
+      </button>
+      <button class="btn" onclick="copyDocumentationMarkdown()" id="copyBtn" title="Copy raw markdown to clipboard">
+        <span>📋</span> Copy Text
+      </button>
+      <button class="btn" onclick="toggleTheme()" id="themeBtn" title="Toggle Dark/Light Mode">
+        <span>🌓</span> Theme
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" aria-label="Table of Contents">
+      <div class="toc-title">Documentation Contents</div>
+      <ul class="toc-list">
+        <li><a class="toc-link" href="#section-1">1. Executive Summary</a></li>
+        <li><a class="toc-link" href="#section-2">2. System Architecture</a></li>
+        <li><a class="toc-link" href="#section-3">3. Core Modules & Engine</a></li>
+        <li><a class="toc-link" href="#section-3-1" style="padding-left: 1.5rem;">3.1 ReAct Orchestrator</a></li>
+        <li><a class="toc-link" href="#section-3-2" style="padding-left: 1.5rem;">3.2 22 Domain Tools</a></li>
+        <li><a class="toc-link" href="#section-3-3" style="padding-left: 1.5rem;">3.3 Hybrid Vector RAG</a></li>
+        <li><a class="toc-link" href="#section-3-4" style="padding-left: 1.5rem;">3.4 5-Stage Dynamic Pricing</a></li>
+        <li><a class="toc-link" href="#section-3-5" style="padding-left: 1.5rem;">3.5 Live Competitor Intel</a></li>
+        <li><a class="toc-link" href="#section-3-6" style="padding-left: 1.5rem;">3.6 Multi-Horizon Forecasting</a></li>
+        <li><a class="toc-link" href="#section-4">4. Database Schema</a></li>
+        <li><a class="toc-link" href="#section-5">5. REST API Specifications</a></li>
+        <li><a class="toc-link" href="#section-6">6. Frontend Architecture</a></li>
+        <li><a class="toc-link" href="#section-7">7. Security, Auditing & RBAC</a></li>
+        <li><a class="toc-link" href="#section-8">8. Deployment Runbooks</a></li>
+      </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content">
+
+      <!-- Hero Header -->
+      <header class="hero-header">
+        <h1 class="hero-title">Hotel Autonomous Revenue AI Agent (KESH)</h1>
+        <p class="hero-subtitle">
+          Enterprise Multi-Tenant AI Platform for Autonomous Hotel Dynamic Pricing, Real-Time Market Intelligence,
+          Deterministic Guardrails, and Explainable Revenue Orchestration.
+        </p>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">System Codename</div>
+            <div class="meta-val">KESH Single-Agent RMS</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Software Architecture</div>
+            <div class="meta-val">ReAct Agent + Hybrid RAG + ML</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Frameworks</div>
+            <div class="meta-val">FastAPI + React 18 + TypeScript</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Currency Standard</div>
+            <div class="meta-val">Indian Rupee (₹ INR) & Multi-Currency</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Section 1 -->
+      <section id="section-1">
+        <h2><span>📌</span> 1. Executive Summary & Application Overview</h2>
+        <p>
+          The <strong>Hotel Autonomous Revenue AI Agent (KESH)</strong> is a production-grade, multi-tenant revenue management
+          platform designed to replace manual revenue spreadsheets and static rule engines with an autonomous, self-learning AI agent.
+        </p>
+        <p>
+          Unlike legacy RMS software that simply outputs flat tariffs, KESH features a <strong>Single Autonomous ReAct Agent Loop</strong>
+          augmented by a <strong>3-Tier Memory System</strong>, <strong>Deterministic Safety Clamps</strong>, <strong>Live Google Hotel Competitor Web Scraping</strong>,
+          and a <strong>Hybrid Semantic Vector RAG Engine</strong>.
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title"><span>🛡️</span> Hard Safety Guardrails</div>
+            <p>Every dynamic rate is strictly bounded between property floor/ceiling limits with hard ±20% single-day change clamps.</p>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>🔍</span> Transparent Reasoning</div>
+            <p>All rate shifts provide human-readable audit explanations tracking pace, city events, weather, and competitor gaps.</p>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>⚡</span> Zero Fragility Architecture</div>
+            <p>Replaces brittle multi-agent communication networks with a robust, tool-augmented single ReAct orchestrator.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2 -->
+      <section id="section-2">
+        <h2><span>🏗️</span> 2. End-to-End System Architecture</h2>
+        <p>
+          The architecture follows a strict decoupled design where the React frontend communicates over authenticated REST APIs with FastAPI.
+          FastAPI routes user and system intents to the ReAct Orchestrator, which dynamically executes any of the 22 domain tools before committing changes to the database.
+        </p>
+
+        <div class="flow-diagram">
++---------------------------------------------------------------------------------+
+|                       React 18 + Vite Frontend Client                           |
+|        (Dark Mode Glassmorphism, Recharts, Lucide Icons, Responsive UI)         |
++---------------------------------------+-----------------------------------------+
+                                        |  Authenticated HTTPS / JWT Bearer
+                                        v
++---------------------------------------------------------------------------------+
+|                               FastAPI Gateway                                   |
+|   (Security Headers, Request ID Tracking, JWT RBAC, Validation, Exceptions)    |
++---------------------------------------+-----------------------------------------+
+                                        |
+                                        v
++---------------------------------------------------------------------------------+
+|                      Autonomous ReAct Orchestrator (KESH)                       |
+|   - Thought -> Action -> Observation -> Final Synthesis Loop                   |
+|   - 3-Tier Memory Manager (Short-Term Dialog + Operational + Hybrid RAG)        |
++----------+----------------------------+-----------------------------+-----------+
+           |                            |                             |
+           v                            v                             v
++----------------------+   +--------------------------+   +-----------------------+
+|  22+ Domain Tools    |   | 5-Stage Dynamic Pricing  |   | ML Forecasting Engine |
+|  - Inventory & Pace  |   | - Base Tariff            |   | - 30d Occupancy Pace  |
+|  - Live OTA Scraper  |   | - Pace Surge (+5-25%)    |   | - 7/14/30d Price Path |
+|  - Holiday Multiplier|   | - Comp Median Balancing  |   | - Midweek vs Weekend  |
+|  - Weather Factor    |   | - Event Surge Factor     |   | - Multi-Horizon Models|
++----------+-----------+   +------------+-------------+   +-----------+-----------+
+           |                            |                             |
+           +----------------------------+-----------------------------+
+                                        |
+                                        v
++---------------------------------------------------------------------------------+
+|                        Deterministic Guardrails Service                         |
+|   - Absolute Floor: max(Base * 0.80, Hotel.min_price_floor)                     |
+|   - Absolute Ceiling: min(Base * 1.20, Hotel.max_price_ceiling)                 |
+|   - Max Daily Fluctuation Clamp: ±20%                                           |
+|   - Manager Approval Escalation: >10% Rate Variance                             |
++---------------------------------------+-----------------------------------------+
+                                        |
+                                        v
++---------------------------------------------------------------------------------+
+|                      Persistence & Audit Ledger Layer                           |
+|      (SQLite / Microsoft SQL Server 2022 / PostgreSQL + Immutable Audit Trail)  |
++---------------------------------------------------------------------------------+
+        </div>
+      </section>
+
+      <!-- Section 3 -->
+      <section id="section-3">
+        <h2><span>⚙️</span> 3. Core Modules & Subsystems</h2>
+
+        <!-- 3.1 -->
+        <h3 id="section-3-1">3.1 Single ReAct Agent Orchestrator & Memory Manager</h3>
+        <p><strong>Primary Implementation:</strong> <code>backend/app/agents/orchestrator.py</code></p>
+        <p>
+          The ReAct (Reasoning + Acting) loop evaluates natural language user questions and autonomous system triggers.
+          Instead of making generative assumptions, KESH executes registered tools to gather real-time data from SQL and live web sources.
+        </p>
+        <ul>
+          <li><strong>Short-Term Dialog Memory:</strong> Retains rolling 20 conversation turns to resolve pronouns and follow-up requests.</li>
+          <li><strong>Operational Memory:</strong> Loads verified property capacities, master room allocations, floor tariffs, and active competitor sets.</li>
+          <li><strong>RAG Semantic Memory:</strong> Semantic embeddings matching hotel policy documents, cancellation rules, and official website pages.</li>
+          <li><strong>Strict Temporal Filtering:</strong> Bounds calendar inquiries to exact month/year windows (e.g., "November holidays" strictly bounds Nov 1 – Nov 30).</li>
+        </ul>
+
+        <!-- 3.2 -->
+        <h3 id="section-3-2">3.2 22+ Domain Tools Registry</h3>
+        <p>All operations are exposed to the agent as deterministic Python tools with structured JSON schemas:</p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Tool Name</th>
+                <th>Category</th>
+                <th>Description & Functionality</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>get_hotel_profile</code></td><td>Property Core</td><td>Fetches total rooms, star rating, city, and min/max rate bounds.</td></tr>
+              <tr><td><code>get_room_types</code></td><td>Inventory</td><td>Retrieves room categories, baseline rates, and room allocations.</td></tr>
+              <tr><td><code>get_inventory</code></td><td>Inventory</td><td>Calculates date-range available, sellable, and blocked room counts.</td></tr>
+              <tr><td><code>get_reservations</code></td><td>Booking Pace</td><td>Ingests live reservations, check-in profiles, and length of stay.</td></tr>
+              <tr><td><code>get_booking_pace</code></td><td>Booking Pace</td><td>Computes 1d, 3d, 7d, 14d, and 30d pickup pace velocity.</td></tr>
+              <tr><td><code>calculate_occupancy</code></td><td>Metrics</td><td>Calculates exact occupancy % across requested stay intervals.</td></tr>
+              <tr><td><code>calculate_adr</code></td><td>Metrics</td><td>Average Daily Rate computation for active booking periods.</td></tr>
+              <tr><td><code>calculate_revpar</code></td><td>Metrics</td><td>Revenue Per Available Room calculations against capacity.</td></tr>
+              <tr><td><code>get_events_holidays</code></td><td>Demand Signals</td><td>Temporal & scope-aware search for national holidays and city festivals.</td></tr>
+              <tr><td><code>get_competitor_rates</code></td><td>Market Intel</td><td>Live competitor rates, market median, and price gap index.</td></tr>
+              <tr><td><code>get_weather</code></td><td>Demand Signals</td><td>Weather forecasts and precipitation-based demand multipliers.</td></tr>
+              <tr><td><code>run_demand_forecast</code></td><td>Forecasting</td><td>Projected occupancy trajectories and target RevPAR benchmarks.</td></tr>
+              <tr><td><code>calculate_pricing_recommendation</code></td><td>Pricing Engine</td><td>5-stage rate recommendation with explainable reasoning trace.</td></tr>
+              <tr><td><code>validate_price_guardrails</code></td><td>Compliance</td><td>Enforces floors, ceilings, and ±20% daily fluctuation limits.</td></tr>
+              <tr><td><code>request_human_approval</code></td><td>Workflow</td><td>Routes recommendations with &gt;10% price variance to manager queue.</td></tr>
+              <tr><td><code>calculate_group_displacement</code></td><td>Group Bookings</td><td>Evaluates displacement revenue, breakeven rates, and counter-offers.</td></tr>
+              <tr><td><code>get_los_restrictions</code></td><td>Restrictions</td><td>Min Length of Stay (MLOS), Closed to Arrival (CTA), Closed to Departure (CTD).</td></tr>
+              <tr><td><code>calculate_trevpar_analytics</code></td><td>Non-Room</td><td>Total RevPAR incorporating F&B, banquet, spa, and ancillary revenue.</td></tr>
+              <tr><td><code>generate_ancillary_upsell_packages</code></td><td>Ancillary</td><td>Dynamic bundling for Airport Transfers, Spa Packages, and Dining Buffets.</td></tr>
+              <tr><td><code>dispatch_multi_channel_alert</code></td><td>Alerts</td><td>Dispatches real-time webhooks, emails, and in-app alert notifications.</td></tr>
+              <tr><td><code>push_two_way_channel_rates</code></td><td>Channel Sync</td><td>2-way rate distribution synchronization to Booking.com, Agoda, STAAH PMS.</td></tr>
+              <tr><td><code>run_multi_agent_swarm_consensus</code></td><td>Multi-Agent</td><td>Executes consensus deliberation across Macro, Micro, Rival, and Risk agents.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3.3 -->
+        <h3 id="section-3-3">3.3 Hybrid Semantic Vector RAG Engine & Crawler</h3>
+        <p><strong>Primary Implementation:</strong> <code>backend/app/rag/vector_store.py</code> & <code>embeddings.py</code></p>
+        <p>
+          The RAG engine indexes unstructured hotel documents, PDF standard operating procedures (SOPs), and crawls official hotel websites.
+          It implements a hybrid similarity scoring algorithm:
+        </p>
+        <pre>Score = 0.50 * CosineSimilarity + 0.35 * LexicalOverlap + ConceptBoost - OffTopicPenalty + PropertyAffinity</pre>
+        <ul>
+          <li><strong>Domain Concept Clusters:</strong> Projects words into specialized concept embeddings (<code>amenities</code>, <code>dining</code>, <code>rooms</code>, <code>pricing</code>, <code>holidays</code>, <code>policies</code>).</li>
+          <li><strong>Cross-Topic Filtration:</strong> Queries for hotel facilities (e.g. "swimming pool", "wifi") penalize holiday records to avoid irrelevant matches.</li>
+          <li><strong>Structured Points Presentation:</strong> Results are tokenized and rendered as individual, highlighted specification cards.</li>
+        </ul>
+
+        <!-- 3.4 -->
+        <h3 id="section-3-4">3.4 5-Stage Autonomous Pricing Pipeline</h3>
+        <p><strong>Primary Implementation:</strong> <code>backend/app/pricing/engine.py</code></p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Stage</th>
+                <th>Signal Category</th>
+                <th>Mathematical Formulation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Occupancy & Pace</strong></td>
+                <td>Pace Velocity</td>
+                <td>Pace &gt; 1.25x baseline &rarr; +10% to +25% surge; Slow pace &rarr; base baseline.</td>
+              </tr>
+              <tr>
+                <td><strong>2. Competitor Positioning</strong></td>
+                <td>Market Index</td>
+                <td>Maintains target 3-7% gap relative to market rival median without price war spirals.</td>
+              </tr>
+              <tr>
+                <td><strong>3. Event & Holiday Multipliers</strong></td>
+                <td>Local Demand</td>
+                <td>Diwali / New Year (1.40x), Corporate Conferences (1.20x), Off-Peak (1.00x).</td>
+              </tr>
+              <tr>
+                <td><strong>4. Weather & Macro Modifiers</strong></td>
+                <td>External Signals</td>
+                <td>Heavy rain warnings apply a 0.95x dampening modifier on leisure demand.</td>
+              </tr>
+              <tr>
+                <td><strong>5. Deterministic Guardrails</strong></td>
+                <td>Safety Clamping</td>
+                <td><code>Rate = clamp(Rate, Floor, Ceiling)</code> with maximum ±20% change clamp.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 4 -->
+      <section id="section-4">
+        <h2><span>🗄️</span> 4. Database Schema & Data Models</h2>
+        <p>
+          The system uses SQLAlchemy ORM supporting SQLite (embedded demo mode) and Microsoft SQL Server 2022 / PostgreSQL (production mode).
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title"><span>🏨</span> Core Property Models</div>
+            <ul>
+              <li><code>hotels</code>: Master property configurations, star rating, city, currency, and rate bounds.</li>
+              <li><code>room_types</code>: Room categories (Deluxe, Suite, Standard), base tariffs, and room counts.</li>
+              <li><code>inventory</code>: Daily date records tracking total, booked, available, and sellable rooms.</li>
+              <li><code>reservations</code>: Ingested guest booking records, ADR, length of stay, and source channel.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span>📊</span> Intelligence & Audit Models</div>
+            <ul>
+              <li><code>competitor_hotels</code> & <code>competitor_rates</code>: Rival properties and live scraped rates.</li>
+              <li><code>pricing_recommendations</code>: Recommended rates, confidence scores, reasons, and approval status.</li>
+              <li><code>agent_runs</code> & <code>agent_tool_calls</code>: Complete audit logs of LLM thoughts and execution times.</li>
+              <li><code>audit_logs</code>: Immutable enterprise audit ledger with actor IP, timestamp, old and new values.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5 -->
+      <section id="section-5">
+        <h2><span>🔌</span> 5. REST API Specifications</h2>
+        <p>The interactive Swagger UI is served at <code>/docs</code> and OpenAPI JSON at <code>/openapi.json</code>:</p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Endpoint</th>
+                <th>Description</th>
+                <th>Authentication</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>POST</code></td><td><code>/api/v1/auth/login</code></td><td>User authentication issuing JWT bearer token.</td><td>Public</td></tr>
+              <tr><td><code>GET</code></td><td><code>/api/v1/hotels/</code></td><td>List accessible hotels for active user.</td><td>User Token</td></tr>
+              <tr><td><code>POST</code></td><td><code>/api/v1/agent/chat</code></td><td>Natural language ReAct agent execution loop.</td><td>User Token</td></tr>
+              <tr><td><code>GET</code></td><td><code>/api/v1/forecasts/price</code></td><td>Multi-day price forecast trajectories for comp set.</td><td>User Token</td></tr>
+              <tr><td><code>POST</code></td><td><code>/api/v1/competitors/scrape-live</code></td><td>Triggers multi-threaded Google Hotel live scraper.</td><td>Manager / Admin</td></tr>
+              <tr><td><code>POST</code></td><td><code>/api/v1/pricing/recommendations/{id}/approve</code></td><td>Human manager rate approval committing to inventory.</td><td>Manager / Admin</td></tr>
+              <tr><td><code>POST</code></td><td><code>/api/v1/rag/search</code></td><td>Hybrid semantic similarity search over knowledge base.</td><td>User Token</td></tr>
+              <tr><td><code>GET</code></td><td><code>/api/v1/exports/download</code></td><td>Download 365-day formatted Excel pricing report.</td><td>User Token</td></tr>
+              <tr><td><code>GET</code></td><td><code>/api/v1/exports/documentation</code></td><td>Download complete system documentation (.html / .md).</td><td>Public / Token</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 6 -->
+      <section id="section-6">
+        <h2><span>💻</span> 6. Frontend Architecture & User Interface</h2>
+        <p>
+          The frontend is built with <strong>React 18</strong>, <strong>TypeScript</strong>, <strong>Vite</strong>, and <strong>Tailwind CSS</strong>,
+          engineered with sleek dark-mode glassmorphism, glowing telemetry indicators, and responsive charts.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title"><span>🤖</span> AI Assistant Interface</div>
+            <p>
+              Features multi-session chat persistence per hotel, visual tool-execution chips with exact millisecond latencies,
+              and structured recommendation cards with approval action buttons.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>📈</span> Demand & Pricing Horizons</div>
+            <p>
+              Displays single-line stay dates, formatted multi-day price paths for both main hotel and competitors, and multi-tier demand badges
+              (Corporate Midweek vs. Weekend Peak).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 7 -->
+      <section id="section-7">
+        <h2><span>🔒</span> 7. Security, Auditing & Role-Based Access Control (RBAC)</h2>
+        <p>The system enforces enterprise security standards throughout all data access paths:</p>
+        <ul>
+          <li><strong>Role Permissions:</strong> Super Admin, Administrator, Revenue Manager, Pricing Analyst, and Read-only Auditor.</li>
+          <li><strong>Tenant Isolation:</strong> Every request validates <code>hotel_id</code> ownership against the authenticated user's assigned property IDs.</li>
+          <li><strong>Cryptographic Password Hashing:</strong> Passwords hashed with Bcrypt via Passlib.</li>
+          <li><strong>Security Response Headers:</strong> Strict Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, and Referrer-Policy.</li>
+          <li><strong>Immutable Audit Logging:</strong> Sensitive events (price approval, floor override, document indexing) record user IP, timestamp, and diffs.</li>
+        </ul>
+      </section>
+
+      <!-- Section 8 -->
+      <section id="section-8">
+        <h2><span>🚀</span> 8. Deployment & Operational Runbooks</h2>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title"><span>🪟</span> Windows One-Click</div>
+            <pre>run_demo.bat
+.\run_demo.ps1</pre>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>🐳</span> Docker Compose</div>
+            <pre>docker-compose up --build</pre>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>🏥</span> Health Check</div>
+            <pre>GET http://localhost:8000/health</pre>
+          </div>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-title">Default Demo Credentials</div>
+          <p>
+            <strong>Super Admin:</strong> <code>superadmin@cuteorange.in</code> / <code>SuperAdmin123!</code><br>
+            <strong>Revenue Manager:</strong> <code>manager@revenueagent.ai</code> / <code>Manager123!Pass</code><br>
+            <strong>Analyst:</strong> <code>analyst@revenueagent.ai</code> / <code>Analyst123!Pass</code>
+          </p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Client-side Download & Export Scripts -->
+  <script>
+    // Theme Toggle
+    function toggleTheme() {
+      const body = document.body;
+      const current = body.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      body.setAttribute('data-theme', next);
+    }
+
+    // Markdown content representation for direct downloads
+    const markdownContent = `# Hotel Autonomous Revenue AI Agent (KESH) — Comprehensive System Documentation
+
+## 1. Executive Summary & Application Overview
+The Hotel Autonomous Revenue AI Agent (codenamed KESH) is a production-grade, multi-tenant revenue management platform designed for autonomous hotel pricing, demand forecasting, real-time market intelligence, and conversational assistance.
+
+### Key Value Propositions
+- Autonomous Pricing with Hard Safety Guardrails (Floor/Ceiling + ±20% daily fluctuation clamps)
+- Explainable Revenue Recommendations (Tracing pickup, pace, events, weather, competitor median)
+- Zero-Latency Single-Agent Architecture (22+ registered domain tools)
+- Multi-Tenant Property Auto-Provisioning (Isolates inventory, memory, and competitor sets)
+- Enterprise-Ready Auditing & RBAC (Super Admin, Revenue Manager, Analyst)
+
+## 2. End-to-End System Architecture
+- Frontend: React 18, TypeScript, Vite, Tailwind CSS
+- Gateway: FastAPI with JWT RBAC, Security Headers, Structured Logging
+- Intelligence: Autonomous ReAct Orchestrator with 3-Tier Memory Manager
+- Tool Suite: 22 Domain Tools (Inventory, Live OTA Scraping, Weather, Guardrails)
+- Engine: 5-Stage Dynamic Pricing Engine with Safety Clamping
+- Storage: SQLite / Microsoft SQL Server 2022 / PostgreSQL
+
+## 3. Core Modules & Subsystems
+- Single ReAct Agent: Thought -> Action -> Observation -> Synthesis
+- 22 Domain Tools Registry: Profile, Inventory, Booking Pace, Occupancy, ADR, RevPAR, Events/Holidays, Weather, Guardrails
+- Hybrid Semantic Vector RAG Engine: Cosine + Lexical Overlap + Concept Clusters (Amenities, Dining, Rooms, Pricing, Holidays, Policies)
+- 5-Stage Dynamic Pricing Pipeline: Base Rate -> Pace Surge -> Comp Gap -> Events Multiplier -> Weather Modifier -> Clamping
+- Live Competitor Intelligence: Multi-threaded OTA scraping across Google Hotel Search
+- Multi-Horizon Forecasting: 30-day occupancy pace and 7/14/30-day competitor price paths
+
+## 4. Database Schema
+- Hotels, Room Types, Inventory, Reservations, Competitor Hotels & Rates, Pricing Recommendations, Agent Runs, Audit Logs
+
+## 5. REST API Specifications
+- Auth, Hotels, Agent Chat, Swarm Evaluation, Pricing Recommendations, Live Scraping, RAG Search, Reports Export
+
+## 6. Frontend Architecture
+- Dashboard, Assistant, Forecasting, Pricing, Competitors, RAG, Swarm, Displacement, Channel Manager, Reports
+
+## 7. Security & Auditing
+- JWT Tokens, Bcrypt Password Hashing, Multi-Tenant Property Isolation, Immutable Audit Trail
+
+## 8. Deployment Runbooks
+- Single-command quick start via run_demo.bat, run_demo.ps1, or docker-compose up
+`;
+
+    // Download Markdown File
+    function downloadMarkdownFile() {
+      const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Hotel_Revenue_AI_Agent_Documentation.md';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Save standalone copy of this HTML file
+    function downloadHtmlFile() {
+      const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Hotel_Revenue_AI_Agent_Documentation.html';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Copy Markdown to Clipboard
+    async function copyDocumentationMarkdown() {
+      const btn = document.getElementById('copyBtn');
+      try {
+        await navigator.clipboard.writeText(markdownContent);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span>✅</span> Copied!';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
+      } catch (err) {
+        alert('Documentation copied to clipboard!');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -28,6 +28,15 @@ class Forecasts(Base):
         Index("idx_forecast_lookup", "hotel_id", "room_type_id", "stay_date"),
     )
 
+    @property
+    def predicted_occupancy_pct(self) -> float:
+        """Helper property to safely calculate or return predicted occupancy as a percentage."""
+        if self.predicted_demand is None:
+            return 80.0
+        if 0.0 <= self.predicted_demand <= 1.0:
+            return round(self.predicted_demand * 100.0, 1)
+        return round(float(self.predicted_demand), 1)
+
 
 class PriceRecommendations(Base):
     __tablename__ = "price_recommendations"

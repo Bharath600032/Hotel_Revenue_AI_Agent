@@ -26,18 +26,31 @@ logger = get_logger("app.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Auto-seed database tables and Super Admin account on application startup."""
+    import threading
     from app.db.session import SessionLocal
     from app.db.init_db import init_db
     try:
         db = SessionLocal()
         init_db(db)
-        from app.rag.sync_service import app_knowledge_syncer
-        app_knowledge_syncer.sync_all_hotels(db)
         db.close()
-        logger.info("startup_init_db_and_knowledge_sync_completed")
+        logger.info("startup_init_db_completed")
     except Exception as e:
         logger.warning("startup_init_db_failed", error=str(e))
+
+    def _background_sync():
+        try:
+            from app.db.session import SessionLocal
+            from app.rag.sync_service import app_knowledge_syncer
+            bg_db = SessionLocal()
+            app_knowledge_syncer.sync_all_hotels(bg_db)
+            bg_db.close()
+            logger.info("background_knowledge_sync_completed")
+        except Exception as sync_e:
+            logger.warning("background_knowledge_sync_deferred", error=str(sync_e))
+
+    threading.Thread(target=_background_sync, daemon=True).start()
     yield
+
 
 
 app = FastAPI(

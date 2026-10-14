@@ -103,7 +103,22 @@ class AgentSwarmService:
 
         # Forecast
         fc = db.query(Forecasts).filter(Forecasts.hotel_id == hotel_id).order_by(Forecasts.stay_date.desc()).first()
-        occ_pct = round(fc.predicted_occupancy_pct, 1) if fc and fc.predicted_occupancy_pct else 84.5
+        occ_pct = 84.5
+        if fc:
+            pred = getattr(fc, "predicted_demand", None)
+            if pred is not None:
+                pred_val = float(pred)
+                if 0.0 < pred_val <= 1.0:
+                    occ_pct = round(pred_val * 100.0, 1)
+                elif primary_rt and primary_rt.total_inventory and pred_val <= primary_rt.total_inventory:
+                    occ_pct = round((pred_val / primary_rt.total_inventory) * 100.0, 1)
+                elif total_rooms and total_rooms > 0 and pred_val <= total_rooms:
+                    occ_pct = round((pred_val / total_rooms) * 100.0, 1)
+                elif 0.0 < pred_val <= 100.0:
+                    occ_pct = round(pred_val, 1)
+            elif hasattr(fc, "predicted_occupancy_pct") and fc.predicted_occupancy_pct is not None:
+                occ_pct = round(float(fc.predicted_occupancy_pct), 1)
+
         pickup_rooms = max(18, min(42, int(total_rooms * 0.44)))
 
         # Dynamic Pricing calculation

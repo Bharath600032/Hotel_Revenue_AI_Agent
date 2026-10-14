@@ -238,9 +238,26 @@ class SingleAutonomousRevenueAgent:
         is_revpar_query = "calculate_revpar" in tool_results or "calculate_adr" in tool_results or any(k in user_lower for k in [
             "revpar", "adr", "metrics", "financial summary", "revenue performance"
         ])
+        is_doc_query = any(k in user_lower for k in [
+            "downloadable file", "download file", "download documentation", "download doc",
+            "documentation file", "downloadable", "export document", "download manual"
+        ]) or (
+            ("document" in user_lower or "documentation" in user_lower or "manual" in user_lower)
+            and any(w in user_lower for w in ["download", "file", "export", "pdf", "html", "get", "need"])
+        )
+
+        # Priority 0: Documentation & Downloadable File Requests
+        if is_doc_query:
+            answer_content = (
+                "**System Documentation Downloads:**\n"
+                "• **Standalone Interactive HTML / PDF**: Download at `/api/v1/exports/documentation?format=html` (includes 1-click **Print / Save as PDF**).\n"
+                "• **Standard Markdown (.MD)**: Download at `/api/v1/exports/documentation?format=md`.\n"
+                "• **Workspace Files**: Available directly in repository as `DOCUMENTATION.html` and `DOCUMENTATION.md`.\n"
+                "• **Reports & Exports Tab**: Navigate to the **Reports & Exports** tab in the left sidebar for 1-click downloads."
+            )
 
         # Priority 1: Events & Festivals
-        if is_events_query:
+        elif is_events_query:
             res_ev = tool_results.get("get_events_holidays") or {}
             if not res_ev:
                 from app.tools.revenue_tools import GetEventsHolidaysTool

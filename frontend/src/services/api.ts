@@ -277,11 +277,16 @@ export const apiService = {
     return res.data;
   },
 
-  // Competitor Intelligence
   getCompetitors: async (hotelId: number): Promise<CompetitorHotel[]> => {
     const res = await apiClient.get(`/hotels/${hotelId}/competitors`);
     return res.data;
   },
+
+  populateDefaultCompetitors: async (hotelId: number): Promise<CompetitorHotel[]> => {
+    const res = await apiClient.post(`/hotels/${hotelId}/competitors/populate-defaults`);
+    return res.data;
+  },
+
 
   getCompetitorAnalysis: async (hotelId: number, stayDate: string, myRate: number): Promise<CompetitorAnalysis> => {
     const res = await apiClient.get(`/hotels/${hotelId}/competitors/analysis`, {
@@ -1168,9 +1173,27 @@ export const apiService = {
     const res = await apiClient.post(`/hotels/${hotelId}/swarm/evaluate`, data);
     return res.data;
   },
+
+  // Reports and Documentation File Downloads
+  downloadPricingReportExcel: async (hotelId: number, startDate: string, endDate: string): Promise<Blob> => {
+    const res = await apiClient.get('/exports/download', {
+      params: { hotel_id: hotelId, start_date: startDate, end_date: endDate },
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  downloadDocumentation: async (format: 'html' | 'md' = 'html'): Promise<Blob> => {
+    const res = await apiClient.get('/exports/documentation', {
+      params: { format },
+      responseType: 'blob',
+    });
+    return res.data;
+  },
 };
 
 export const api = apiService;
+
 
 
 
