@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { apiService } from '../services/api';
 import { RevenueSummary, PickupPace } from '../types';
-import { TrendingUp, DollarSign, Percent, Calendar, RefreshCw, BarChart2 } from 'lucide-react';
+import { TrendingUp, Calendar, RefreshCw, BarChart2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -19,7 +19,7 @@ const get30DaysAgoString = () => new Date(Date.now() - 30 * 86400000).toISOStrin
 
 export const Revenue: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.hotel_id || 1;
+  const hotelId = selectedHotel?.hotel_id || 4;
   const [startDate, setStartDate] = useState(get30DaysAgoString());
   const [endDate, setEndDate] = useState(getTodayDateString());
   const [stayDate, setStayDate] = useState(getTodayDateString());
@@ -27,27 +27,58 @@ export const Revenue: React.FC = () => {
   const [summary, setSummary] = useState<RevenueSummary | null>(null);
   const [pickup, setPickup] = useState<PickupPace | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pickupLoading, setPickupLoading] = useState(false);
 
-  useEffect(() => {
-    fetchMetrics();
-  }, [hotelId, startDate, endDate, stayDate]);
-
-  const fetchMetrics = async () => {
+  const fetchSummary = useCallback(async (hId: number, start: string, end: string) => {
     try {
-      if (!summary) {
-        setLoading(true);
-      }
-      const [sumData, pickData] = await Promise.all([
-        apiService.getRevenueSummary(hotelId, startDate, endDate),
-        apiService.getPickupPace(hotelId, stayDate),
-      ]);
+      setLoading(true);
+      const sumData = await apiService.getRevenueSummary(hId, start, end);
       setSummary(sumData);
-      setPickup(pickData);
     } catch (err) {
-      console.error('Failed to load revenue metrics:', err);
+      console.error('Failed to load revenue summary:', err);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const fetchPickup = useCallback(async (hId: number, targetStayDate: string) => {
+    if (!targetStayDate) return;
+    try {
+      setPickupLoading(true);
+      const pickData = await apiService.getPickupPace(hId, targetStayDate);
+      setPickup(pickData);
+    } catch (err) {
+      console.error('Failed to load pickup velocity pace:', err);
+    } finally {
+      setPickupLoading(false);
+    }
+  }, []);
+
+  // Fetch summary when hotelId, startDate, or endDate changes
+  useEffect(() => {
+    fetchSummary(hotelId, startDate, endDate);
+  }, [hotelId, startDate, endDate, fetchSummary]);
+
+  // Fetch pickup pace when hotelId or stayDate changes
+  useEffect(() => {
+    fetchPickup(hotelId, stayDate);
+  }, [hotelId, stayDate, fetchPickup]);
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    if (val) {
+      setStayDate(val);
+    }
+  };
+
+  const handleStayDateChange = (val: string) => {
+    if (!val) return;
+    setStayDate(val);
+  };
+
+  const handleRefreshAll = () => {
+    fetchSummary(hotelId, startDate, endDate);
+    fetchPickup(hotelId, stayDate);
   };
 
   const pickupChartData = pickup
@@ -88,15 +119,16 @@ export const Revenue: React.FC = () => {
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e) => handleEndDateChange(e.target.value)}
               className="bg-slate-950 border border-slate-800 text-white px-2 py-1 rounded"
             />
           </div>
           <button
-            onClick={fetchMetrics}
+            onClick={handleRefreshAll}
+            title="Refresh All Metrics"
             className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -181,38 +213,89 @@ export const Revenue: React.FC = () => {
 
             {/* Pickup Pace Velocity Visual Chart Card */}
             <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-amber-400" />
-                  Booking Pickup Velocity Chart
-                </h3>
-                <input
-                  type="date"
-                  value={stayDate}
-                  onChange={(e) => setStayDate(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 text-xs text-white px-2 py-1 rounded"
-                />
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-amber-400" />
+                    Booking Pickup Velocity Chart
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1 text-xs">
+                    <span className="text-slate-400">
+                      Stay Date: <strong className="text-sky-300">{stayDate}</strong>
+                    </span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-emerald-400 font-semibold">
+                      {pickup?.current_booked_rooms ?? 0} Rooms Booked
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={stayDate}
+                    onChange={(e) => handleStayDateChange(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 text-xs text-white px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-amber-400 transition-colors"
+                  />
+                  <button
+                    onClick={() => fetchPickup(hotelId, stayDate)}
+                    disabled={pickupLoading}
+                    title="Refresh Pickup Pace"
+                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${pickupLoading ? 'animate-spin text-amber-400' : ''}`} />
+                  </button>
+                </div>
               </div>
 
-              {pickupChartData.length > 0 ? (
-                <div className="h-56">
+              <div className="h-56 relative">
+                {pickupLoading && (
+                  <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-10 rounded-xl transition-all">
+                    <div className="flex items-center gap-2 text-sky-400 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-950/90 border border-sky-500/30 shadow-lg">
+                      <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
+                      <span>Updating Velocity for {stayDate}...</span>
+                    </div>
+                  </div>
+                )}
+
+                {pickupChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={pickupChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="window" stroke="#64748b" />
-                      <YAxis stroke="#64748b" />
+                    <BarChart
+                      key={`pickup-chart-${stayDate}-${pickup?.current_booked_rooms}-${pickup?.pickup_1d}-${pickup?.pickup_30d}`}
+                      data={pickupChartData}
+                      margin={{ top: 12, right: 12, left: -15, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="window" stroke="#64748b" tickLine={false} axisLine={{ stroke: '#334155' }} />
+                      <YAxis stroke="#64748b" tickLine={false} axisLine={{ stroke: '#334155' }} allowDecimals={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#38bdf8', borderRadius: '8px', color: '#fff' }}
+                        contentStyle={{
+                          backgroundColor: '#0f172a',
+                          borderColor: '#38bdf8',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+                        }}
                         itemStyle={{ color: '#38bdf8', fontWeight: 700 }}
                         labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                        formatter={(value: any) => [`${value} Rooms`, 'Velocity Pickup']}
                       />
-                      <Bar dataKey="pickup" fill="#38bdf8" radius={[6, 6, 0, 0]} name="Rooms Picked Up" />
+                      <Bar
+                        dataKey="pickup"
+                        fill="#38bdf8"
+                        radius={[6, 6, 0, 0]}
+                        name="Rooms Picked Up"
+                        isAnimationActive={true}
+                        animationDuration={500}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 text-center py-6">Select a stay date to view velocity.</p>
-              )}
+                ) : (
+                  <div className="flex items-center justify-center h-full text-xs text-slate-500">
+                    Select a stay date to view velocity.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>

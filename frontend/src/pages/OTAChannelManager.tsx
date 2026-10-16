@@ -37,10 +37,11 @@ export const OTAChannelManager: React.FC = () => {
   const [syncLogs, setSyncLogs] = useState<any[]>([]);
 
   // Push form state
-  const [selectedRoomType, setSelectedRoomType] = useState<string>('Deluxe Ocean Suite');
-  const [pushRateINR, setPushRateINR] = useState<number>(9800);
+  const [selectedRoomType, setSelectedRoomType] = useState<string>('Standard Room');
+  const [pushRateINR, setPushRateINR] = useState<number>(2800);
   const [pushReason, setPushReason] = useState<string>('AI Dynamic Weekend Demand Surge');
   const [isPushing, setIsPushing] = useState<boolean>(false);
+  const [roomTypes, setRoomTypes] = useState<any[]>([]);
 
   // Pull state
   const [isPulling, setIsPulling] = useState<boolean>(false);
@@ -62,14 +63,20 @@ export const OTAChannelManager: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [pmsRes, otaRes, logsRes] = await Promise.all([
+      const [pmsRes, otaRes, logsRes, rtsRes] = await Promise.all([
         apiService.getPMSConnector(hotelId),
         apiService.getOTAChannels(hotelId),
         apiService.getSyncLogs(hotelId, 30),
+        apiService.getRoomTypes(hotelId).catch(() => []),
       ]);
       setPmsConnector(pmsRes);
       setOtaChannels(otaRes || []);
       setSyncLogs(logsRes || []);
+      if (Array.isArray(rtsRes) && rtsRes.length > 0) {
+        setRoomTypes(rtsRes);
+        setSelectedRoomType(rtsRes[0].room_type_name);
+        setPushRateINR(Math.round(rtsRes[0].base_price * 1.1) || 2800);
+      }
     } catch (err) {
       console.error('Failed to load OTA & PMS connector data:', err);
     } finally {
@@ -431,13 +438,28 @@ export const OTAChannelManager: React.FC = () => {
               <label className="text-xs font-semibold text-slate-300">Target Room Type</label>
               <select
                 value={selectedRoomType}
-                onChange={(e) => setSelectedRoomType(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedRoomType(val);
+                  const found = roomTypes.find((r) => r.room_type_name === val);
+                  if (found) {
+                    setPushRateINR(Math.round(found.base_price * 1.1) || 2800);
+                  }
+                }}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
               >
-                <option value="Deluxe Ocean Suite">Deluxe Ocean Suite</option>
-                <option value="Executive Suite">Executive Suite</option>
-                <option value="Superior King Room">Superior King Room</option>
-                <option value="Standard Twin Room">Standard Twin Room</option>
+                {roomTypes.length > 0 ? (
+                  roomTypes.map((rt) => (
+                    <option key={rt.room_type_id} value={rt.room_type_name}>
+                      {rt.room_type_name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Standard Room">Standard Room</option>
+                    <option value="Deluxe Room">Deluxe Room</option>
+                  </>
+                )}
               </select>
             </div>
 

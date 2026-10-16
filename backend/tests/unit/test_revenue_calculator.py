@@ -64,6 +64,7 @@ def test_calculate_period_summary_db(db_session):
     # 7 rooms booked at ₹6,000 each = ₹42,000 revenue
     res = Reservation(
         hotel_id=hotel.hotel_id,
+        booking_reference="REF-CALC-1",
         reservation_code="RES-CALC-1",
         room_type_id=rt.room_type_id,
         rate_plan_id=rp.rate_plan_id,
