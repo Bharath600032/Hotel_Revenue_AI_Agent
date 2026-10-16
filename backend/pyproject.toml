@@ -12,7 +12,7 @@ readme = "README.md"
 license = { text = "MIT" }
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "6.0"
 addopts = "-ra -q --import-mode=importlib"
 testpaths = ["tests"]
 pythonpath = ["app"]

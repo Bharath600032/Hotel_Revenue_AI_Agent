@@ -62,3 +62,36 @@ def test_generate_pricing_recommendations_excel(db_session):
     ws = wb.active
     assert ws.title == "Pricing Recommendations"
     assert ws.cell(row=1, column=1).value == "Stay Date"
+
+
+def test_cute_orange_report_room_types(db_session):
+    from app.models import RoomType
+    hotel = Hotel(
+        hotel_code="8485",
+        hotel_name="Cute Orange Hotel",
+        city="Chennai",
+        min_price_floor=2800.0,
+        max_price_ceiling=5000.0
+    )
+    db_session.add(hotel)
+    db_session.commit()
+
+    rt1 = RoomType(hotel_id=hotel.hotel_id, room_type_name="Standard Room", room_type_code="8485_STD", base_price=2800.0)
+    rt2 = RoomType(hotel_id=hotel.hotel_id, room_type_name="Deluxe Room", room_type_code="8485_DLX", base_price=2800.0)
+    db_session.add_all([rt1, rt2])
+    db_session.commit()
+
+    excel_bytes = report_generator.generate_pricing_recommendations_excel(
+        db_session, hotel_id=hotel.hotel_id, start_date=date(2026, 9, 1), end_date=date(2026, 9, 7)
+    )
+
+    wb = load_workbook(io.BytesIO(excel_bytes))
+    ws = wb.active
+    room_types_found = set()
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        room_types_found.add(row[1])
+
+    assert room_types_found == {"Standard Room", "Deluxe Room"}
+    assert "Executive Suite" not in room_types_found
+    assert "Deluxe King" not in room_types_found
+

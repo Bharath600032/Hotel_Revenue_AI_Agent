@@ -1,15 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { FileSpreadsheet, Download, Calendar, CheckCircle, BookOpen, FileText, Printer, ExternalLink, Sparkles } from 'lucide-react';
+import { useHotel } from '../context/HotelContext';
+import { RoomType } from '../types';
+import { FileSpreadsheet, Download, Calendar, CheckCircle, BookOpen, FileText, Sparkles } from 'lucide-react';
 
 export const Reports: React.FC = () => {
-  const [hotelId] = useState(1);
+  const { selectedHotel } = useHotel();
+  const hotelId = selectedHotel?.hotel_id || (selectedHotel as any)?.id || 4;
+  const hotelName = selectedHotel?.hotel_name || 'Cute Orange Hotel';
+
   const [startDate, setStartDate] = useState('2026-09-01');
   const [endDate, setEndDate] = useState('2026-12-31');
   const [downloading, setDownloading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
   const [docDownloading, setDocDownloading] = useState<string | null>(null);
   const [docSuccessMsg, setDocSuccessMsg] = useState(false);
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiService.getRoomTypes(hotelId)
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setRoomTypes(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch hotel room categories:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [hotelId]);
 
   const generateClientExcelCsv = (start: string, end: string): Blob => {
     const startDt = new Date(start);
@@ -31,29 +53,39 @@ export const Reports: React.FC = () => {
       'Reasoning & Signals'
     ].join(','));
 
-    const roomTypes = ['Executive Suite', 'Deluxe King', 'Superior Twin'];
+    // Strictly limit to the hotel's actual room categories (Cute Orange: Standard Room & Deluxe Room)
+    const activeRoomCategories = roomTypes.length > 0
+      ? roomTypes.map((rt) => ({
+          name: rt.room_type_name,
+          baseRate: rt.base_price || 2800,
+        }))
+      : [
+          { name: 'Standard Room', baseRate: 2800 },
+          { name: 'Deluxe Room', baseRate: 2800 },
+        ];
+
     const cur = new Date(startDt);
     let count = 0;
     while (cur <= endDt && count < 1000) {
       const dateStr = cur.toISOString().split('T')[0];
       const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
 
-      roomTypes.forEach((rt, idx) => {
-        const baseRate = 7500 + idx * 2000;
+      activeRoomCategories.forEach((rt) => {
+        const baseRate = rt.baseRate;
         const recRate = isWeekend ? Math.round(baseRate * 1.25) : Math.round(baseRate * 1.08);
         const minRate = Math.round(baseRate * 0.85);
         const maxRate = Math.round(baseRate * 1.50);
-        const occ = isWeekend ? 88 : 72;
+        const occ = isWeekend ? 86 : 70;
         const demand = isWeekend ? 'HIGH' : 'MODERATE';
         const compMedian = isWeekend ? Math.round(recRate * 1.04) : Math.round(recRate * 0.98);
         const demandIdx = isWeekend ? 1.45 : 1.15;
         const appReq = recRate > baseRate * 1.2 ? 'YES' : 'NO';
         const status = 'RECOMMENDED';
-        const reason = `AI Dynamic Pricing Horizon Sync (${isWeekend ? 'Weekend surge' : 'Weekday steady baseline'})`;
+        const reason = `AI Dynamic Pricing Horizon Sync (${isWeekend ? 'Weekend surge (+25%)' : 'Weekday baseline (+8%)'})`;
 
         rows.push([
           dateStr,
-          `"${rt}"`,
+          `"${rt.name}"`,
           baseRate,
           recRate,
           minRate,
@@ -96,7 +128,8 @@ export const Reports: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Pricing_Recommendations_Hotel_${hotelId}_${startDate}_to_${endDate}.${fileExt}`;
+      const safeHotelName = (hotelName || 'Cute_Orange_Hotel').replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.download = `Pricing_Recommendations_${safeHotelName}_${startDate}_to_${endDate}.${fileExt}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -241,10 +274,33 @@ export const Reports: React.FC = () => {
 
       {/* Excel Report Generator Card */}
       <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl space-y-6">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-4">
-          <Calendar className="w-5 h-5 text-indigo-400" />
-          Configure Excel Report Horizon
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-400" />
+            Configure Excel Report Horizon
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Target Hotel:</span>
+            <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-full">
+              {hotelName}
+            </span>
+          </div>
+        </div>
+
+        {/* Active room categories banner */}
+        <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-slate-300">
+            <span className="text-slate-400 font-medium">Report Room Categories:</span>
+            {(roomTypes.length > 0 ? roomTypes.map((r) => r.room_type_name) : ['Standard Room', 'Deluxe Room']).map((name) => (
+              <span key={name} className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 font-semibold rounded-md border border-indigo-500/30">
+                {name}
+              </span>
+            ))}
+          </div>
+          <span className="text-[11px] text-slate-500">
+            {roomTypes.length > 0 ? `${roomTypes.length} Active Categories` : '2 Active Categories'}
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">

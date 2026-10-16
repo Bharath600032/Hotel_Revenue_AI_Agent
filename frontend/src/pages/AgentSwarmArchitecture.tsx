@@ -596,7 +596,7 @@ export const AgentSwarmArchitecture: React.FC = () => {
       {activeTab === 'live_eval' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Form Trigger Panel */}
-          <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-md">
+          <div className="lg:col-span-5 min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-md">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <GitMerge className="w-5 h-5 text-purple-400" />
@@ -669,23 +669,23 @@ export const AgentSwarmArchitecture: React.FC = () => {
           </div>
 
           {/* Live Swarm Consensus Output Render */}
-          <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4 shadow-md">
+          <div className="lg:col-span-7 min-w-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4 shadow-md">
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
-                  <div>
+              <div className="pb-3 border-b border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-400 flex-shrink-0" />
                     <h3 className="text-sm font-bold text-white">Synthesized Swarm Decision</h3>
-                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate max-w-md">
-                      {activeSession?.consensus_topic || 'Select or run an evaluation session'}
-                    </p>
                   </div>
+                  {activeSession && (
+                    <span className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-extrabold rounded-full font-mono whitespace-nowrap flex-shrink-0 shadow-sm">
+                      {activeSession.overall_confidence_pct}% Confidence Score
+                    </span>
+                  )}
                 </div>
-                {activeSession && (
-                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-extrabold rounded-full font-mono flex-shrink-0 self-start sm:self-auto">
-                    {activeSession.overall_confidence_pct}% Confidence Score
-                  </span>
-                )}
+                <p className="text-[11px] text-slate-400 font-mono pl-7 leading-relaxed">
+                  {activeSession?.consensus_topic || 'Select or run an evaluation session'}
+                </p>
               </div>
 
               {/* Sub-Agent Individual Votes Grid */}
@@ -795,11 +795,11 @@ export const AgentSwarmArchitecture: React.FC = () => {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800 font-mono">
                 <tr>
-                  <th className="p-3">Evaluation Topic</th>
-                  <th className="p-3">Proposed Action</th>
-                  <th className="p-3 text-center">Confidence Score</th>
-                  <th className="p-3 text-center">Conflict Status</th>
-                  <th className="p-3 text-right">Timestamp</th>
+                  <th className="p-3 whitespace-nowrap">Evaluation Topic</th>
+                  <th className="p-3 whitespace-nowrap">Proposed Action</th>
+                  <th className="p-3 text-center whitespace-nowrap">Confidence Score</th>
+                  <th className="p-3 text-center whitespace-nowrap min-w-[150px]">Conflict Status</th>
+                  <th className="p-3 text-right whitespace-nowrap">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -812,26 +812,34 @@ export const AgentSwarmArchitecture: React.FC = () => {
                     }}
                     className="hover:bg-slate-800/50 cursor-pointer transition-colors group"
                   >
-                    <td className="p-3 text-white font-bold max-w-[300px] truncate group-hover:text-purple-300 flex items-center gap-2">
-                      <GitMerge className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-400 flex-shrink-0" />
-                      <span>{s.consensus_topic}</span>
+                    <td className="p-3 text-white font-bold max-w-[280px] group-hover:text-purple-300 align-middle">
+                      <div className="flex items-center gap-2 truncate">
+                        <GitMerge className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-400 flex-shrink-0" />
+                        <span className="truncate">{s.consensus_topic}</span>
+                      </div>
                     </td>
-                    <td className="p-3 font-mono text-indigo-300">{s.proposed_action}</td>
-                    <td className="p-3 text-center font-extrabold text-purple-300 font-mono">
+                    <td className="p-3 font-mono text-indigo-300 align-middle max-w-[320px]">
+                      <span className="truncate block" title={s.proposed_action}>
+                        {s.proposed_action}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center font-extrabold text-purple-300 font-mono align-middle whitespace-nowrap">
                       {s.overall_confidence_pct}%
                     </td>
-                    <td className="p-3 text-center">
+                    <td className="p-3 text-center align-middle whitespace-nowrap min-w-[150px]">
                       {s.conflict_detected ? (
-                        <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-[10px] font-bold">
+                        <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded-full text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                           RESOLVED CONFLICT
                         </span>
                       ) : (
-                        <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-bold">
+                        <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           UNANIMOUS
                         </span>
                       )}
                     </td>
-                    <td className="p-3 text-right text-slate-400 font-mono text-[11px]">
+                    <td className="p-3 text-right text-slate-400 font-mono text-[11px] align-middle whitespace-nowrap">
                       {s.created_at ? new Date(s.created_at).toLocaleString() : 'Recent'}
                     </td>
                   </tr>
