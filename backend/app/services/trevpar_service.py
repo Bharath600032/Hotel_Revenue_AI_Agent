@@ -30,7 +30,11 @@ class TRevPARService:
         try:
             s_dt = date.fromisoformat(start_date)
             e_dt = date.fromisoformat(end_date)
-        except ValueError:
+            if s_dt.year < 1900 or s_dt.year > 2100:
+                s_dt = date.today() - timedelta(days=7)
+            if e_dt.year < 1900 or e_dt.year > 2100:
+                e_dt = date.today()
+        except (ValueError, TypeError):
             s_dt = date.today() - timedelta(days=7)
             e_dt = date.today()
 

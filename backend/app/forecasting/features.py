@@ -27,8 +27,17 @@ class FeatureEngineer:
             return pd.DataFrame(), pd.DataFrame()
 
         df_hist = pd.DataFrame(historical_records)
-        df_hist["stay_date"] = pd.to_datetime(df_hist["stay_date"])
-        df_hist = df_hist.sort_values("stay_date").reset_index(drop=True)
+        # Sanitize dates to prevent OutOfBoundsDatetime (e.g. year < 1900 or > 2100)
+        def sanitize_dt(d):
+            if hasattr(d, "year") and (d.year < 1900 or d.year > 2100):
+                return date.today()
+            return d
+
+        if "stay_date" in df_hist.columns:
+            df_hist["stay_date"] = df_hist["stay_date"].apply(sanitize_dt)
+            df_hist["stay_date"] = pd.to_datetime(df_hist["stay_date"], errors="coerce")
+            df_hist["stay_date"] = df_hist["stay_date"].fillna(pd.Timestamp.today())
+            df_hist = df_hist.sort_values("stay_date").reset_index(drop=True)
 
         # 1. Calendar Features
         df_hist["day_of_week"] = df_hist["stay_date"].dt.dayofweek
@@ -116,11 +125,20 @@ class FeatureEngineer:
         rolling_7 = df_hist["rolling_7_mean"].iloc[-1] if not df_hist.empty else 10.0
 
         for dt in future_dates:
-            dt_ts = pd.to_datetime(dt)
+            clean_dt = dt
+            if hasattr(clean_dt, "year") and (clean_dt.year < 1900 or clean_dt.year > 2100):
+                clean_dt = date(date.today().year, getattr(clean_dt, "month", 1), getattr(clean_dt, "day", 1))
+            try:
+                dt_ts = pd.to_datetime(clean_dt, errors="coerce")
+                if pd.isna(dt_ts):
+                    dt_ts = pd.Timestamp.today()
+            except Exception:
+                dt_ts = pd.Timestamp.today()
+
             dow = dt_ts.dayofweek
             is_wknd = 1 if dow in [4, 5] else 0
 
-            hf, ei, cm = get_date_signals(dt)
+            hf, ei, cm = get_date_signals(clean_dt if isinstance(clean_dt, date) else dt_ts.date())
 
             # Day-of-week multiplier for realistic feature propagation
             dow_mult = 1.30 if is_wknd else (1.10 if dow in [2, 3] else (0.75 if dow == 6 else 0.90))

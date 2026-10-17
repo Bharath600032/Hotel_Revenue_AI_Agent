@@ -24,8 +24,7 @@ import {
   Wind,
 } from 'lucide-react';
 import { useHotel } from '../context/HotelContext';
-
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+import { isValidDateString, getTodayDateString } from '../utils/dateUtils';
 
 export const Events: React.FC = () => {
   const { selectedHotel } = useHotel();
@@ -74,6 +73,7 @@ export const Events: React.FC = () => {
   }, [stayDate, activeCity, hotelId, weatherHorizon]);
 
   const fetchEventData = async () => {
+    if (!isValidDateString(stayDate)) return;
     try {
       if (events.length === 0 && holidays.length === 0) {
         setLoading(true);
@@ -97,6 +97,7 @@ export const Events: React.FC = () => {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidDateString(startDate) || (endDate && !isValidDateString(endDate))) return;
     try {
       setSubmitting(true);
       await apiService.createEvent({

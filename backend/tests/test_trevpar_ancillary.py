@@ -8,11 +8,14 @@ from app.schemas.trevpar_ancillary import AncillaryRevenueCreate
 def test_trevpar_service_summary():
     db = SessionLocal()
     try:
+        from app.models.hotel import Hotel
+        active_hotel = db.query(Hotel).filter(Hotel.status == "ACTIVE").first()
+        h_id = active_hotel.hotel_id if active_hotel else 4
         today = date.today().strftime("%Y-%m-%d")
         start = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
         
-        summary = trevpar_service.calculate_trevpar_summary(db, hotel_id=1, start_date=start, end_date=today)
-        assert summary.hotel_id == 1
+        summary = trevpar_service.calculate_trevpar_summary(db, hotel_id=h_id, start_date=start, end_date=today)
+        assert summary.hotel_id == h_id
         assert summary.trevpar > 0
         assert summary.nrevpar > 0
         assert summary.revpor > 0

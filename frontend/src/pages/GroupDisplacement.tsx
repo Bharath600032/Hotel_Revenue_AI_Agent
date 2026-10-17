@@ -37,9 +37,7 @@ import {
   Legend,
 } from 'recharts';
 
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
-const getFutureDateString = (days: number) =>
-  new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+import { isValidDateString, getTodayDateString, getFutureDateString } from '../utils/dateUtils';
 
 const buildDefaultLOSRules = (startDate: string, days: number = 14): LOSRuleResponse[] => {
   const sDt = new Date(startDate || new Date().toISOString().split('T')[0]);
@@ -159,10 +157,11 @@ export const GroupDisplacement: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchLOSRules = async (sDate?: string, eDate?: string) => {
+    const start = sDate || losStartDate;
+    const end = eDate || losEndDate;
+    if (!isValidDateString(start) || !isValidDateString(end)) return;
     try {
       setLoadingLOS(true);
-      const start = sDate || losStartDate || getTodayDateString();
-      const end = eDate || losEndDate || getFutureDateString(14);
       let days = 14;
       if (start && end) {
         const d1 = new Date(start).getTime();
@@ -178,7 +177,6 @@ export const GroupDisplacement: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to fetch LOS rules:', err);
-      const start = sDate || losStartDate || getTodayDateString();
       setLosRules(buildDefaultLOSRules(start, 14));
     } finally {
       setLoadingLOS(false);
@@ -201,6 +199,10 @@ export const GroupDisplacement: React.FC = () => {
 
   const handleEvaluate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+      setErrorMsg('Please select valid arrival and departure dates.');
+      return;
+    }
     setErrorMsg(null);
     setEvaluating(true);
     try {
@@ -636,7 +638,7 @@ export const GroupDisplacement: React.FC = () => {
                 onChange={(e) => {
                   const val = e.target.value;
                   setLosStartDate(val);
-                  if (val) fetchLOSRules(val, losEndDate);
+                  if (isValidDateString(val) && isValidDateString(losEndDate)) fetchLOSRules(val, losEndDate);
                 }}
                 className="bg-slate-950 border border-slate-800 text-white px-3 py-1.5 rounded-lg"
               />
@@ -647,7 +649,7 @@ export const GroupDisplacement: React.FC = () => {
                 onChange={(e) => {
                   const val = e.target.value;
                   setLosEndDate(val);
-                  if (val) fetchLOSRules(losStartDate, val);
+                  if (isValidDateString(losStartDate) && isValidDateString(val)) fetchLOSRules(losStartDate, val);
                 }}
                 className="bg-slate-950 border border-slate-800 text-white px-3 py-1.5 rounded-lg"
               />

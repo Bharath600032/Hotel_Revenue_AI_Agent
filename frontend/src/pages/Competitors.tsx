@@ -33,8 +33,7 @@ import {
 } from 'recharts';
 
 import { useHotel } from '../context/HotelContext';
-
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+import { isValidDateString, getTodayDateString } from '../utils/dateUtils';
 
 export const Competitors: React.FC = () => {
   const { selectedHotel } = useHotel();
@@ -95,6 +94,7 @@ export const Competitors: React.FC = () => {
   }, [hotelId, stayDate, debouncedRate]);
 
   const fetchCompetitorData = async () => {
+    if (!isValidDateString(stayDate)) return;
     try {
       if (competitors.length === 0 && !analysis) {
         setLoading(true);
@@ -121,6 +121,7 @@ export const Competitors: React.FC = () => {
   };
 
   const handleFetchGoogleLiveRates = async () => {
+    if (!isValidDateString(stayDate)) return;
     try {
       setIsSyncingGoogle(true);
       setSyncStatusMsg(null);

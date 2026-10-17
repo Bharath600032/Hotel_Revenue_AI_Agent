@@ -190,8 +190,16 @@ async def upload_events_excel(
             end_date_val = start_date_val
 
         try:
-            start_dt = pd.to_datetime(start_date_val).date()
-            end_dt = pd.to_datetime(end_date_val).date()
+            start_ts = pd.to_datetime(start_date_val, errors="coerce")
+            end_ts = pd.to_datetime(end_date_val, errors="coerce")
+            if pd.isna(start_ts) or pd.isna(end_ts):
+                skipped_count += 1
+                continue
+            start_dt = start_ts.date()
+            end_dt = end_ts.date()
+            if not (1900 <= start_dt.year <= 2100 and 1900 <= end_dt.year <= 2100):
+                skipped_count += 1
+                continue
         except Exception:
             skipped_count += 1
             continue

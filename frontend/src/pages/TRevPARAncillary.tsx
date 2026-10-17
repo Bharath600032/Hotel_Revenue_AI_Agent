@@ -26,8 +26,9 @@ import {
   Legend,
 } from 'recharts';
 
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
-const get7DaysAgoString = () => new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+import { isValidDateString, getTodayDateString, getNDaysAgoString } from '../utils/dateUtils';
+
+const get7DaysAgoString = () => getNDaysAgoString(7);
 
 const formatINR = (val: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -40,7 +41,7 @@ const CATEGORY_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#06b6d4', '#ec4899', 
 
 export const TRevPARAncillary: React.FC = () => {
   const { selectedHotel } = useHotel();
-  const hotelId = selectedHotel?.hotel_id || 1;
+  const hotelId = selectedHotel?.hotel_id || 4;
 
   const [startDate, setStartDate] = useState(get7DaysAgoString());
   const [endDate, setEndDate] = useState(getTodayDateString());
@@ -65,6 +66,7 @@ export const TRevPARAncillary: React.FC = () => {
   }, [hotelId, startDate, endDate]);
 
   const fetchTRevPARData = async () => {
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) return;
     try {
       if (!summary || packages.length === 0) {
         setLoading(true);
@@ -84,6 +86,7 @@ export const TRevPARAncillary: React.FC = () => {
 
   const handleRecordEntry = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidDateString(logDate)) return;
     try {
       const payload: AncillaryRevenueEntry = {
         entry_date: logDate,
@@ -196,8 +199,8 @@ export const TRevPARAncillary: React.FC = () => {
                   +38.5% over RevPAR
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Total Revenue / {summary.total_sellable_rooms} Sellable Rooms ({summary.occupancy_pct}% Occ)
+              <p className="text-[11px] text-slate-400">
+                Total Revenue / {summary.total_sellable_rooms} Sellable Room Nights ({summary.occupancy_pct}% Occ)
               </p>
             </div>
 

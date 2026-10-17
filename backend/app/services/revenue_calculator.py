@@ -43,6 +43,11 @@ class RevenueCalculator:
         self, db: Session, hotel_id: int, start_date: date, end_date: date
     ) -> RevenueSummary:
         """Calculate aggregate revenue KPIs over a stay date range."""
+        if hasattr(start_date, "year") and (start_date.year < 1900 or start_date.year > 2100):
+            start_date = date.today()
+        if hasattr(end_date, "year") and (end_date.year < 1900 or end_date.year > 2100):
+            end_date = date.today()
+
         from app.agents.hotel_agent_factory import hotel_agent_factory
         hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
         # Query total sellable rooms from inventory
@@ -55,12 +60,16 @@ class RevenueCalculator:
             )
             .all()
         )
+        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        days_count = max(1, (end_date - start_date).days + 1)
+        hotel_capacity = hotel.total_rooms if hotel and hotel.total_rooms else 10
+
         total_sellable = sum(inv.sellable_rooms for inv in inventory_records)
         if total_sellable == 0:
-            # Fallback: calculate from hotel total rooms * days count
-            hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
-            days_count = (end_date - start_date).days + 1
-            total_sellable = (hotel.total_rooms if hotel else 100) * days_count
+            total_sellable = hotel_capacity * days_count
+        elif hotel_capacity > 0:
+            # Sellable rooms cannot exceed physical capacity * number of days
+            total_sellable = min(total_sellable, hotel_capacity * days_count)
 
         # Query reservations in period
         reservations = (
@@ -116,6 +125,9 @@ class RevenueCalculator:
 
     def calculate_pickup_pace(self, db: Session, hotel_id: int, stay_date: date) -> PickupPace:
         """Calculate 1d, 3d, 7d, 14d, and 30d pickup pace for a target stay date."""
+        if hasattr(stay_date, "year") and (stay_date.year < 1900 or stay_date.year > 2100):
+            stay_date = date.today()
+
         from app.agents.hotel_agent_factory import hotel_agent_factory
         hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
 

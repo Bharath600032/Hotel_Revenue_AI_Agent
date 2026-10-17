@@ -13,9 +13,8 @@ import {
 } from 'recharts';
 
 import { useHotel } from '../context/HotelContext';
-
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
-const get30DaysAgoString = () => new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+import { isValidDateString, getTodayDateString, getNDaysAgoString } from '../utils/dateUtils';
+const get30DaysAgoString = () => getNDaysAgoString(30);
 
 export const Revenue: React.FC = () => {
   const { selectedHotel } = useHotel();
@@ -30,6 +29,7 @@ export const Revenue: React.FC = () => {
   const [pickupLoading, setPickupLoading] = useState(false);
 
   const fetchSummary = useCallback(async (hId: number, start: string, end: string) => {
+    if (!isValidDateString(start) || !isValidDateString(end)) return;
     try {
       setLoading(true);
       const sumData = await apiService.getRevenueSummary(hId, start, end);
@@ -42,7 +42,7 @@ export const Revenue: React.FC = () => {
   }, []);
 
   const fetchPickup = useCallback(async (hId: number, targetStayDate: string) => {
-    if (!targetStayDate) return;
+    if (!isValidDateString(targetStayDate)) return;
     try {
       setPickupLoading(true);
       const pickData = await apiService.getPickupPace(hId, targetStayDate);
@@ -56,23 +56,26 @@ export const Revenue: React.FC = () => {
 
   // Fetch summary when hotelId, startDate, or endDate changes
   useEffect(() => {
-    fetchSummary(hotelId, startDate, endDate);
+    if (isValidDateString(startDate) && isValidDateString(endDate)) {
+      fetchSummary(hotelId, startDate, endDate);
+    }
   }, [hotelId, startDate, endDate, fetchSummary]);
 
   // Fetch pickup pace when hotelId or stayDate changes
   useEffect(() => {
-    fetchPickup(hotelId, stayDate);
+    if (isValidDateString(stayDate)) {
+      fetchPickup(hotelId, stayDate);
+    }
   }, [hotelId, stayDate, fetchPickup]);
 
   const handleEndDateChange = (val: string) => {
     setEndDate(val);
-    if (val) {
+    if (isValidDateString(val)) {
       setStayDate(val);
     }
   };
 
   const handleStayDateChange = (val: string) => {
-    if (!val) return;
     setStayDate(val);
   };
 

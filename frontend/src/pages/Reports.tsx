@@ -3,6 +3,7 @@ import { apiService } from '../services/api';
 import { useHotel } from '../context/HotelContext';
 import { RoomType } from '../types';
 import { FileSpreadsheet, Download, Calendar, CheckCircle, BookOpen, FileText, Sparkles } from 'lucide-react';
+import { isValidDateString } from '../utils/dateUtils';
 
 export const Reports: React.FC = () => {
   const { selectedHotel } = useHotel();
@@ -109,6 +110,10 @@ export const Reports: React.FC = () => {
   };
 
   const handleDownload = async () => {
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+      alert('Please provide valid start and end dates.');
+      return;
+    }
     setDownloading(true);
     setSuccessMsg(false);
     try {

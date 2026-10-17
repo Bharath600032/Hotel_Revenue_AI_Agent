@@ -276,6 +276,7 @@ export interface GroupDisplacementRequest {
   end_date: string;
   rooms_requested: number;
   offered_rate: number;
+  group_name?: string;
   f_and_b_revenue?: number;
   meeting_room_rental?: number;
   other_ancillary_revenue?: number;
@@ -298,10 +299,23 @@ export interface GroupDisplacementResponse {
   recommendation: 'ACCEPT' | 'REJECT' | 'COUNTER_OFFER';
   decision_rationale: string;
   daily_breakdown: DailyDisplacementBreakdown[];
+  group_name?: string;
+  rooms_requested?: number;
+  checkin_date?: string;
+  checkout_date?: string;
+  nights?: number;
+  total_room_nights?: number;
+  offered_rate?: number;
+  proposed_group_revenue?: number;
+  transient_revenue_lost?: number;
+  net_displacement_impact?: number;
+  counter_offer_rate?: number;
+  decision?: string;
 }
 
 export interface LOSRuleResponse {
   rule_id: number;
+  los_rule_id?: number;
   hotel_id: number;
   stay_date: string;
   room_type_id?: number;
@@ -312,6 +326,7 @@ export interface LOSRuleResponse {
   is_system_recommended: boolean;
   ai_confidence?: number;
   recommendation_reason?: string;
+  reason?: string;
 }
 
 export interface LOSRuleUpdate {

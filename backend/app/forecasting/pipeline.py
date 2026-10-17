@@ -36,6 +36,10 @@ class ForecastingPipeline:
         start_date: date,
         horizon_days: int = 30,
     ) -> ForecastResponse:
+        # Sanitize out-of-bounds start_date (e.g., partial year typing like 2-10-16)
+        if hasattr(start_date, "year") and (start_date.year < 1900 or start_date.year > 2100):
+            start_date = date.today()
+
         # Check room type exists
         room_type = db.query(RoomType).filter(RoomType.room_type_id == room_type_id, RoomType.hotel_id == hotel_id).first()
         if not room_type:

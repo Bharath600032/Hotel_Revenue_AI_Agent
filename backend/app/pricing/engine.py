@@ -53,6 +53,9 @@ class PricingEngine:
         """
         Calculate data-driven rate recommendation for a specific room type and stay date.
         """
+        if hasattr(stay_date, "year") and (stay_date.year < 1900 or stay_date.year > 2100):
+            stay_date = date.today()
+
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
         if not hotel:
             hotel = db.query(Hotel).filter(Hotel.status == "ACTIVE").first() or db.query(Hotel).first()
