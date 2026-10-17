@@ -130,9 +130,9 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
         : 'Occupancy, pickup pace, competitor median, local events & holidays',
       icon: BrainCircuit,
       color: 'from-blue-500/20 to-indigo-500/10 border-blue-500/30 text-blue-400',
-      badge: status?.stage_1_signals_analyzed
+      badge: status?.stage_1_signals_analyzed !== undefined
         ? `${status.stage_1_signals_analyzed.toLocaleString()} Signals`
-        : (status ? `${status.total_recommendations * 5} Signals` : 'Active'),
+        : 'Active Signals',
       statusText: 'Continuous Data Crawl',
     },
     {

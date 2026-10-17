@@ -98,7 +98,7 @@ async def get_architecture_flow(hotel_id: Optional[int] = Query(None), db: Sessi
         total_events = db.query(Events).count()
 
     total_recommendations = rec_q.count()
-    total_agent_runs = max(agent_q.count(), 1)
+    total_agent_runs = agent_q.count()
     pending_approvals = rec_q.filter(PriceRecommendations.status.in_(["PENDING", "PENDING_APPROVAL", "Pending"])).count()
 
     dialect_name = db.bind.dialect.name.lower()
