@@ -40,11 +40,13 @@ export const NineStepArchitectureFlow: React.FC<NineStepArchitectureFlowProps> =
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
 
-  const fetchArchitectureFlow = async (showLoadingState = false) => {
+  const fetchArchitectureFlow = async (showLoadingState = false, isSync = false) => {
     try {
       if (showLoadingState) setLoading(true);
       setIsRefreshing(true);
-      const data = await apiService.getArchitectureFlow(hotelId);
+      const data = isSync
+        ? await apiService.syncArchitectureFlow(hotelId)
+        : await apiService.getArchitectureFlow(hotelId);
       if (data && data.steps) {
         setSteps(data.steps);
       }
@@ -58,13 +60,14 @@ export const NineStepArchitectureFlow: React.FC<NineStepArchitectureFlowProps> =
   };
 
   useEffect(() => {
-    fetchArchitectureFlow(true);
+    fetchArchitectureFlow(true, false);
   }, [hotelId, refreshKey]);
 
-  // Real-time auto-polling every 5 minutes (300,000 ms)
+  // Real-time live auto-sync every 5 minutes (300,000 ms)
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchArchitectureFlow(false);
+    const interval = setInterval(async () => {
+      await fetchArchitectureFlow(false, true);
+      window.dispatchEvent(new Event('pipeline-data-updated'));
     }, 300000);
     return () => clearInterval(interval);
   }, [hotelId]);
@@ -72,7 +75,7 @@ export const NineStepArchitectureFlow: React.FC<NineStepArchitectureFlowProps> =
   // Global event listeners for immediate state updates
   useEffect(() => {
     const handleGlobalUpdate = () => {
-      fetchArchitectureFlow(false);
+      fetchArchitectureFlow(false, false);
     };
 
     window.addEventListener('pipeline-data-updated', handleGlobalUpdate);
@@ -87,13 +90,13 @@ export const NineStepArchitectureFlow: React.FC<NineStepArchitectureFlowProps> =
   }, [hotelId]);
 
   const handleManualSync = async () => {
-    await fetchArchitectureFlow(true);
+    await fetchArchitectureFlow(true, true);
     window.dispatchEvent(new Event('pipeline-data-updated'));
     if (onRefresh) onRefresh();
   };
 
   const handleManualVerify = async () => {
-    await fetchArchitectureFlow(true);
+    await fetchArchitectureFlow(true, false);
     if (onRefresh) onRefresh();
   };
 

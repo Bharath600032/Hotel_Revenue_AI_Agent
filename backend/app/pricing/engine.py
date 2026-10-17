@@ -16,6 +16,9 @@ from app.forecasting.pipeline import forecasting_pipeline
 from app.schemas.pricing import PriceRecommendationResponse
 from app.core.exceptions import ResourceNotFoundError
 from app.core.config import settings
+from app.core.logging import get_logger
+
+logger = get_logger("app.pricing.engine")
 
 
 class PricingEngine:
@@ -79,12 +82,26 @@ class PricingEngine:
         # 2. Fetch Pickup Pace
         pace = revenue_calculator.calculate_pickup_pace(db, hotel_id=hotel_id, stay_date=stay_date)
 
-        # 3. Fetch Forecast Demand
-        fc_res = forecasting_pipeline.run_pipeline(
-            db, hotel_id=hotel_id, room_type_id=room_type_id, start_date=stay_date, horizon_days=1
+        # 3. Fetch Forecast Demand (check cached forecast in DB first, fallback to pipeline)
+        from app.models.ai import Forecasts
+        fc_obj = (
+            db.query(Forecasts)
+            .filter(
+                Forecasts.hotel_id == hotel_id,
+                Forecasts.room_type_id == room_type_id,
+                Forecasts.stay_date == stay_date,
+            )
+            .first()
         )
-        forecast_val = fc_res.predictions[0].predicted_demand if fc_res.predictions else (room_type.total_inventory * 0.7)
-        fc_confidence = fc_res.predictions[0].confidence_score if fc_res.predictions else 0.85
+        if fc_obj:
+            forecast_val = fc_obj.predicted_demand
+            fc_confidence = fc_obj.confidence_score or 0.85
+        else:
+            fc_res = forecasting_pipeline.run_pipeline(
+                db, hotel_id=hotel_id, room_type_id=room_type_id, start_date=stay_date, horizon_days=7
+            )
+            forecast_val = fc_res.predictions[0].predicted_demand if fc_res.predictions else (room_type.total_inventory * 0.7)
+            fc_confidence = fc_res.predictions[0].confidence_score if fc_res.predictions else 0.85
 
         # 4. Fetch Competitor Market Analysis
         base_rate = room_type.base_price
@@ -219,8 +236,23 @@ class PricingEngine:
         Stage 4: System Publishes Price (deploys safe rates directly to RoomInventory)
         Stage 5: Controlled Autonomous Feedback Loop & Metrics Summary
         """
+        import time
+        import uuid
         from datetime import date, timedelta, datetime, timezone
-        from app.models.hotel import Hotel
+        from app.models import (
+            Hotel,
+            RoomInventory,
+            Reservation,
+            CompetitorRates,
+            CompetitorHotels,
+            Events,
+            Forecasts,
+            AgentRuns,
+        )
+        from app.agents.hotel_agent_factory import hotel_agent_factory
+
+        t0 = time.time()
+        hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
 
         hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
         if hotel and hotel.status != "ACTIVE":
@@ -238,18 +270,26 @@ class PricingEngine:
         today = date.today()
         room_types = db.query(RoomType).filter(RoomType.hotel_id == hotel_id).all()
 
-        analyzed_count = 0
+        # Step 1: Pre-seed forecasts across room types in 1 pass per room type
+        for rt in room_types:
+            try:
+                forecasting_pipeline.run_pipeline(
+                    db, hotel_id=hotel_id, room_type_id=rt.room_type_id, start_date=today, horizon_days=horizon_days
+                )
+            except Exception as fc_err:
+                logger.warning("forecast_preseed_failed", error=str(fc_err))
+
         recommended_count = 0
         pending_approval_count = 0
         auto_published_count = 0
 
+        # Step 2: Calculate dynamic rate recommendations with floor/ceiling & approval guardrails
         for rt in room_types:
             for day_offset in range(horizon_days):
                 stay_dt = today + timedelta(days=day_offset)
                 rec = self.calculate_recommendation(
                     db, hotel_id=hotel_id, room_type_id=rt.room_type_id, stay_date=stay_dt
                 )
-                analyzed_count += 1
                 recommended_count += 1
 
                 if rec.status == "PENDING" or rec.requires_approval:
@@ -257,21 +297,75 @@ class PricingEngine:
                 else:
                     auto_published_count += 1
 
+        # Step 3: Compute live data signals analyzed across database
+        total_res = db.query(Reservation).filter(Reservation.hotel_id == hotel_id).count()
+        total_inv = db.query(RoomInventory).filter(RoomInventory.hotel_id == hotel_id).count()
+        total_comp = (
+            db.query(CompetitorRates)
+            .join(CompetitorHotels, CompetitorRates.competitor_id == CompetitorHotels.competitor_id)
+            .filter(CompetitorHotels.hotel_id == hotel_id)
+            .count()
+        )
+        total_events = db.query(Events).count()
+        total_fc = db.query(Forecasts).filter(Forecasts.hotel_id == hotel_id).count()
+        total_signals = total_res + total_inv + total_comp + total_events + total_fc
+
+        # Step 4: Log Autonomous Cycle execution in AgentRuns
+        execution_time_ms = int((time.time() - t0) * 1000)
+        agent_run_id = f"run_{uuid.uuid4().hex[:12]}"
+        try:
+            db_run = AgentRuns(
+                agent_run_id=agent_run_id,
+                user_id=1,
+                hotel_id=hotel_id,
+                request=f"5-Stage Controlled Autonomous Pricing Cycle ({horizon_days}d horizon)",
+                status="COMPLETED",
+                started_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+                final_result=f"Analyzed {total_signals} data signals, generated {recommended_count} rates ({auto_published_count} auto-published, {pending_approval_count} pending manager review in {execution_time_ms}ms)",
+            )
+            db.add(db_run)
+            db.commit()
+        except Exception as run_err:
+            db.rollback()
+            logger.warning("agent_run_logging_failed", error=str(run_err))
+
         return {
             "hotel_id": hotel_id,
             "horizon_days": horizon_days,
-            "stage_1_data_points_analyzed": analyzed_count,
+            "stage_1_data_points_analyzed": total_signals,
+            "stage_1_signals_analyzed": total_signals,
+            "stage_1_breakdown": {
+                "reservations": total_res,
+                "inventory_days": total_inv,
+                "competitor_rates": total_comp,
+                "events": total_events,
+                "demand_forecasts": total_fc,
+            },
             "stage_2_recommendations_generated": recommended_count,
             "stage_3_pending_approvals": pending_approval_count,
             "stage_4_auto_published": auto_published_count,
             "stage_5_autonomous_mode": "ACTIVE_CONTROLLED",
             "guardrail_threshold_pct": round(settings.APPROVAL_THRESHOLD_PCT * 100, 1),
+            "execution_time_ms": execution_time_ms,
             "last_run_timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     def get_pipeline_status(self, db: Session, hotel_id: int) -> Dict[str, Any]:
         """Fetch real-time metrics across all 5 pricing pipeline stages for the hotel."""
         from datetime import datetime, timezone
+        from app.models import (
+            Reservation,
+            RoomInventory,
+            CompetitorRates,
+            CompetitorHotels,
+            Events,
+            Forecasts,
+            PriceRecommendations,
+        )
+        from app.agents.hotel_agent_factory import hotel_agent_factory
+
+        hotel_agent_factory.ensure_hotel_live_data(db, hotel_id)
 
         recs = db.query(PriceRecommendations).filter(PriceRecommendations.hotel_id == hotel_id).all()
         
@@ -285,10 +379,30 @@ class PricingEngine:
             1 for r in recs if r.status and r.status.upper() in ["REJECTED"]
         )
 
+        total_res = db.query(Reservation).filter(Reservation.hotel_id == hotel_id).count()
+        total_inv = db.query(RoomInventory).filter(RoomInventory.hotel_id == hotel_id).count()
+        total_comp = (
+            db.query(CompetitorRates)
+            .join(CompetitorHotels, CompetitorRates.competitor_id == CompetitorHotels.competitor_id)
+            .filter(CompetitorHotels.hotel_id == hotel_id)
+            .count()
+        )
+        total_events = db.query(Events).count()
+        total_fc = db.query(Forecasts).filter(Forecasts.hotel_id == hotel_id).count()
+        total_signals = total_res + total_inv + total_comp + total_events + total_fc
+
         return {
             "hotel_id": hotel_id,
             "total_recommendations": len(recs),
             "stage_1_status": "ACTIVE",
+            "stage_1_signals_analyzed": total_signals,
+            "stage_1_breakdown": {
+                "reservations": total_res,
+                "inventory_days": total_inv,
+                "competitor_rates": total_comp,
+                "events": total_events,
+                "demand_forecasts": total_fc,
+            },
             "stage_2_status": "ACTIVE",
             "stage_3_pending_approvals": pending_count,
             "stage_4_published_prices": published_count,

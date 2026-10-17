@@ -508,6 +508,13 @@ export const apiService = {
     return res.data;
   },
 
+  syncArchitectureFlow: async (hotelId?: number): Promise<any> => {
+    const res = await apiClient.post('/architecture-flow/sync', null, {
+      params: { hotel_id: hotelId },
+    });
+    return res.data;
+  },
+
   // Agent Chat
   sendAgentChat: async (hotelId: number, message: string, sessionId?: string): Promise<AgentChatResponse> => {
     const res = await apiClient.post('/agent/chat', {

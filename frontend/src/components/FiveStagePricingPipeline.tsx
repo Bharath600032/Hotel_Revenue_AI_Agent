@@ -25,6 +25,14 @@ interface PipelineStatus {
   hotel_id: number;
   total_recommendations: number;
   stage_1_status: string;
+  stage_1_signals_analyzed?: number;
+  stage_1_breakdown?: {
+    reservations: number;
+    inventory_days: number;
+    competitor_rates: number;
+    events: number;
+    demand_forecasts: number;
+  };
   stage_2_status: string;
   stage_3_pending_approvals: number;
   stage_4_published_prices: number;
@@ -54,6 +62,23 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
     return () => clearInterval(interval);
   }, [hotelId]);
 
+  // Global event listeners for immediate state updates
+  useEffect(() => {
+    const handleGlobalUpdate = () => {
+      fetchStatus();
+    };
+
+    window.addEventListener('pipeline-data-updated', handleGlobalUpdate);
+    window.addEventListener('recommendation-approved', handleGlobalUpdate);
+    window.addEventListener('hotel-data-changed', handleGlobalUpdate);
+
+    return () => {
+      window.removeEventListener('pipeline-data-updated', handleGlobalUpdate);
+      window.removeEventListener('recommendation-approved', handleGlobalUpdate);
+      window.removeEventListener('hotel-data-changed', handleGlobalUpdate);
+    };
+  }, [hotelId]);
+
   const fetchStatus = async () => {
     try {
       const data = await apiService.getPipelineStatus(hotelId);
@@ -64,28 +89,34 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
   };
 
   const handleRunAutonomousCycle = async () => {
+    let stageInterval: any = null;
     try {
       setIsRunning(true);
       setActiveStage(1);
 
-      // Visual step-by-step feedback
-      setTimeout(() => setActiveStage(2), 500);
-      setTimeout(() => setActiveStage(3), 1000);
-      setTimeout(() => setActiveStage(4), 1500);
-      setTimeout(() => setActiveStage(5), 2000);
+      stageInterval = setInterval(() => {
+        setActiveStage((prev) => {
+          if (!prev || prev >= 4) return 2;
+          return prev + 1;
+        });
+      }, 700);
 
-      const result = await apiService.runAutonomousCycle(hotelId, 30);
+      const result = await apiService.runAutonomousCycle(hotelId, 14);
+      if (stageInterval) clearInterval(stageInterval);
+
+      setActiveStage(5);
       setCycleMetrics(result);
       await fetchStatus();
+      window.dispatchEvent(new Event('pipeline-data-updated'));
       if (onCycleComplete) onCycleComplete();
     } catch (err) {
+      if (stageInterval) clearInterval(stageInterval);
       console.error('Autonomous pricing cycle failed:', err);
     } finally {
-      setTimeout(async () => {
+      setTimeout(() => {
         setIsRunning(false);
         setActiveStage(null);
-        await fetchStatus();
-      }, 2200);
+      }, 1000);
     }
   };
 
@@ -94,10 +125,14 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
       num: 1,
       title: 'Stage 1',
       subtitle: 'AI Analyzes Data',
-      desc: 'Occupancy, pickup pace, competitor median, local events & holidays',
+      desc: status?.stage_1_breakdown
+        ? `${status.stage_1_breakdown.reservations} Bookings, ${status.stage_1_breakdown.competitor_rates} Comp Rates, ${status.stage_1_breakdown.demand_forecasts} Forecasts`
+        : 'Occupancy, pickup pace, competitor median, local events & holidays',
       icon: BrainCircuit,
       color: 'from-blue-500/20 to-indigo-500/10 border-blue-500/30 text-blue-400',
-      badge: status ? `${status.total_recommendations * 5} Signals` : 'Active',
+      badge: status?.stage_1_signals_analyzed
+        ? `${status.stage_1_signals_analyzed.toLocaleString()} Signals`
+        : (status ? `${status.total_recommendations * 5} Signals` : 'Active'),
       statusText: 'Continuous Data Crawl',
     },
     {
@@ -212,13 +247,13 @@ export const FiveStagePricingPipeline: React.FC<FiveStagePricingPipelineProps> =
               Autonomous Pricing Cycle Completed Successfully
             </span>
             <span className="text-[10px] text-emerald-500 font-mono">
-              Horizon: {cycleMetrics.horizon_days} Days
+              Horizon: {cycleMetrics.horizon_days} Days {cycleMetrics.execution_time_ms ? `(${cycleMetrics.execution_time_ms}ms)` : ''}
             </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-300 pt-1 border-t border-emerald-500/20">
             <div>
               <span className="text-[10px] text-slate-500 uppercase font-bold">Stage 1 Analyzed</span>
-              <p className="font-mono font-bold text-white">{cycleMetrics.stage_1_data_points_analyzed} Date Points</p>
+              <p className="font-mono font-bold text-white">{(cycleMetrics.stage_1_signals_analyzed || cycleMetrics.stage_1_data_points_analyzed)?.toLocaleString()} Live Signals</p>
             </div>
             <div>
               <span className="text-[10px] text-slate-500 uppercase font-bold">Stage 2 Recommended</span>

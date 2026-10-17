@@ -184,7 +184,7 @@ export const Dashboard: React.FC = () => {
       <NineStepArchitectureFlow hotelId={activeHotelId} refreshKey={refreshKey} onRefresh={handleRefreshData} />
 
       {/* 5-STAGE CONTROLLED AUTONOMOUS PRICING PIPELINE */}
-      <FiveStagePricingPipeline hotelId={activeHotelId} onCycleComplete={handleRefreshData} />
+      <FiveStagePricingPipeline hotelId={activeHotelId} refreshKey={refreshKey} onCycleComplete={handleRefreshData} />
 
       {/* Autonomous Rate Optimization Alert Card */}
       <div className="bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-900 p-6 rounded-3xl border border-indigo-500/30 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
