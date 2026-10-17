@@ -34,6 +34,7 @@ class OTAChannelResponse(BaseModel):
     rate_parity_status: str
     mapped_room_count: int
     last_pushed_rate_inr: float
+    room_type_rates: Optional[Dict[str, float]] = None
     last_sync_at: Optional[datetime]
 
     class Config:
@@ -66,7 +67,9 @@ class RatePushResponse(BaseModel):
     hotel_id: int
     status: str
     target_channels: List[str]
+    room_type: Optional[str] = None
     pushed_rate_inr: float
+    room_type_rates: Optional[Dict[str, float]] = None
     parity_check: str
     records_updated: int
     execution_time_ms: float

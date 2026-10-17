@@ -32,6 +32,7 @@ class OTAChannelConnection(Base):
     rate_parity_status = Column(String(50), default="PARITY_OK") # PARITY_OK, UNDERCUT_DETECTED, BREACH_WARNING
     mapped_room_count = Column(Integer, default=6)
     last_pushed_rate_inr = Column(Float, default=8500.0)
+    room_type_rates = Column(JSON, nullable=True) # Dict of {room_type_name: pushed_rate_inr}
     last_sync_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

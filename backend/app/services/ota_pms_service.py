@@ -90,8 +90,13 @@ class OTAPMSService:
     def get_ota_channels(cls, hotel_id: int, db: Session) -> List[OTAChannelConnection]:
         cls.seed_default_ota_pms_data(hotel_id, db)
         all_channels = db.query(OTAChannelConnection).filter(OTAChannelConnection.hotel_id == hotel_id).all()
+        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        rts = hotel.room_types if hotel else []
         unique_map: Dict[str, OTAChannelConnection] = {}
         for c in all_channels:
+            if not c.room_type_rates and rts:
+                c.room_type_rates = {rt.room_type_name: round(float(rt.base_price * 1.1), 2) for rt in rts}
+                db.commit()
             if c.channel_code not in unique_map:
                 unique_map[c.channel_code] = c
         return list(unique_map.values())
@@ -108,6 +113,11 @@ class OTAPMSService:
         db: Session,
     ) -> OTAChannelConnection:
         cls.seed_default_ota_pms_data(hotel_id, db)
+        hotel = db.query(Hotel).filter(Hotel.hotel_id == hotel_id).first()
+        initial_rates = {}
+        if hotel and hotel.room_types:
+            for rt in hotel.room_types:
+                initial_rates[rt.room_type_name] = round(float(rt.base_price * 1.1), 2)
         ch = OTAChannelConnection(
             hotel_id=hotel_id,
             channel_name=channel_name,
@@ -117,6 +127,7 @@ class OTAPMSService:
             rate_parity_status="PARITY_OK",
             mapped_room_count=mapped_room_count or 8,
             last_pushed_rate_inr=last_pushed_rate_inr or 9500.0,
+            room_type_rates=initial_rates,
             last_sync_at=datetime.utcnow(),
         )
         db.add(ch)
@@ -176,12 +187,35 @@ class OTAPMSService:
 
         updated_count = 0
         target_list = target_channels or ["OPERA_CLOUD", "BCOM", "MMT", "GOI", "AGD", "EXP"]
+        latest_room_rates = {}
 
         for ch in channels:
-            ch.last_pushed_rate_inr = recommended_rate_inr
+            # Update individual room type rate dictionary
+            curr_rates = ch.room_type_rates or {}
+            if not isinstance(curr_rates, dict):
+                curr_rates = {}
+            else:
+                curr_rates = dict(curr_rates)
+
+            curr_rates[room_type] = float(recommended_rate_inr)
+            ch.room_type_rates = curr_rates
+            ch.last_pushed_rate_inr = float(recommended_rate_inr)
             ch.last_sync_at = now
             ch.rate_parity_status = "PARITY_OK"
             updated_count += 1
+            latest_room_rates = curr_rates
+
+        # Also sync RoomInventory for this room type so PMS/engine reflects the rate
+        try:
+            from app.models.hotel import RoomType, RoomInventory
+            target_rt = db.query(RoomType).filter(RoomType.hotel_id == hotel_id, RoomType.room_type_name == room_type).first()
+            if target_rt:
+                db.query(RoomInventory).filter(
+                    RoomInventory.hotel_id == hotel_id,
+                    RoomInventory.room_type_id == target_rt.room_type_id,
+                ).update({"current_rate": float(recommended_rate_inr)}, synchronize_session=False)
+        except Exception:
+            pass
 
         pms = db.query(PMSConnector).filter(PMSConnector.hotel_id == hotel_id).first()
         if pms:
@@ -198,7 +232,8 @@ class OTAPMSService:
             records_processed=updated_count + 1,
             details_json={
                 "room_type": room_type,
-                "pushed_rate_inr": recommended_rate_inr,
+                "pushed_rate_inr": float(recommended_rate_inr),
+                "room_type_rates": latest_room_rates,
                 "target_channels": target_list,
                 "override_reason": override_reason or "AI Dynamic Pricing Push",
                 "parity_verified": True,

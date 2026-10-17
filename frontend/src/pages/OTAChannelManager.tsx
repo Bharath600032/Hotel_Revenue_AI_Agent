@@ -103,8 +103,8 @@ export const OTAChannelManager: React.FC = () => {
         recommended_rate_inr: pushRateINR,
         override_reason: pushReason,
       });
-      showNotification(`Successfully pushed ₹${pushRateINR.toLocaleString('en-IN')} to PMS & ${res.target_channels.length} OTAs (${res.execution_time_ms}ms)`, 'success');
-      fetchData();
+      showNotification(`Successfully pushed ₹${pushRateINR.toLocaleString('en-IN')} for ${selectedRoomType} to PMS & ${res.target_channels.length} OTAs (${res.execution_time_ms}ms)`, 'success');
+      await fetchData();
     } catch (err) {
       showNotification('Failed to push rates to channels', 'error');
     } finally {
@@ -396,24 +396,51 @@ export const OTAChannelManager: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800/60 space-y-2 text-xs">
-                    <div className="flex justify-between items-center text-slate-300">
-                      <span className="text-slate-400">Last Pushed Rate (₹):</span>
-                      <span className="font-semibold text-emerald-400 font-mono text-sm">
-                        ₹{ch.last_pushed_rate_inr?.toLocaleString('en-IN')}
-                      </span>
+                  <div className="pt-3 border-t border-slate-800/60 space-y-3 text-xs">
+                    {/* Per-Room-Type Live Rates Breakdown */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Room Type</span>
+                        <span>OTA Price (Net Payout)</span>
+                      </div>
+                      {roomTypes.length > 0 ? (
+                        roomTypes.map((rt) => {
+                          const rate = ch.room_type_rates?.[rt.room_type_name] || (selectedRoomType === rt.room_type_name ? ch.last_pushed_rate_inr : Math.round(rt.base_price * 1.1));
+                          const commAmt = Math.round(rate * (ch.commission_pct / 100));
+                          const netPayout = rate - commAmt;
+                          return (
+                            <div key={rt.room_type_id} className="p-2 bg-slate-900/90 rounded-xl border border-slate-800/80 flex justify-between items-center hover:border-slate-700 transition">
+                              <div>
+                                <span className="font-semibold text-white text-xs block">{rt.room_type_name}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">Base: ₹{rt.base_price?.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-mono font-bold text-emerald-400 text-xs block">₹{rate?.toLocaleString('en-IN')}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">Net: ₹{netPayout?.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex justify-between items-center text-slate-300">
+                          <span className="text-slate-400">Last Pushed Rate (₹):</span>
+                          <span className="font-semibold text-emerald-400 font-mono text-sm">
+                            ₹{ch.last_pushed_rate_inr?.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex justify-between items-center text-slate-300">
+                    <div className="flex justify-between items-center text-slate-300 pt-1">
                       <span className="text-slate-400">Rate Parity Status:</span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
                         {ch.rate_parity_status}
                       </span>
                     </div>
 
-                    <div className="flex justify-between items-center text-slate-400 pt-1 text-[11px]">
-                      <span>Mapped Room Types:</span>
-                      <span>{ch.mapped_room_count} Room Categories</span>
+                    <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                      <span>Mapped Categories:</span>
+                      <span className="font-mono text-slate-300">{roomTypes.length || ch.mapped_room_count} Room Types Synchronized</span>
                     </div>
                   </div>
                 </div>
@@ -441,9 +468,14 @@ export const OTAChannelManager: React.FC = () => {
                 onChange={(e) => {
                   const val = e.target.value;
                   setSelectedRoomType(val);
-                  const found = roomTypes.find((r) => r.room_type_name === val);
-                  if (found) {
-                    setPushRateINR(Math.round(found.base_price * 1.1) || 2800);
+                  const existingPushed = uniqueChannels.find((c) => c.room_type_rates && c.room_type_rates[val])?.room_type_rates?.[val];
+                  if (existingPushed) {
+                    setPushRateINR(Math.round(existingPushed));
+                  } else {
+                    const found = roomTypes.find((r) => r.room_type_name === val);
+                    if (found) {
+                      setPushRateINR(Math.round(found.base_price * 1.1) || 2800);
+                    }
                   }
                 }}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
