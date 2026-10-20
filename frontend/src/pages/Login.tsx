@@ -8,7 +8,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('admin@revenueagent.ai');
-  const [password, setPassword] = useState('Admin123!Pass');
+  const [password, setPassword] = useState('HotelRev#2026!Enterprise');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeRole, setActiveRole] = useState<'admin' | 'manager' | 'analyst'>('admin');
@@ -114,6 +114,7 @@ export const Login: React.FC = () => {
                   <input
                     type="email"
                     required
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
@@ -131,6 +132,7 @@ export const Login: React.FC = () => {
                   <input
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
@@ -157,7 +159,7 @@ export const Login: React.FC = () => {
               <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleSelectRole('admin', 'superadmin@cuteorange.in', 'SuperAdmin123!')}
+                  onClick={() => handleSelectRole('admin', 'superadmin@cuteorange.in', 'CuteOrange#2026!GlobalAI')}
                   className={`px-2 py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center space-y-1 transition-all border ${
                     email === 'superadmin@cuteorange.in'
                       ? 'bg-purple-600/20 border-purple-500 text-purple-300 shadow-md shadow-purple-600/20'
@@ -169,7 +171,7 @@ export const Login: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSelectRole('admin', 'admin@revenueagent.ai', 'Admin123!Pass')}
+                  onClick={() => handleSelectRole('admin', 'admin@revenueagent.ai', 'HotelRev#2026!Enterprise')}
                   className={`px-2 py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center space-y-1 transition-all border ${
                     activeRole === 'admin' && email !== 'superadmin@cuteorange.in'
                       ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300 shadow-md shadow-indigo-600/20'
@@ -181,7 +183,7 @@ export const Login: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSelectRole('manager', 'manager@revenueagent.ai', 'Manager123!Pass')}
+                  onClick={() => handleSelectRole('manager', 'manager@revenueagent.ai', 'YieldMgr#2026!DynamicRate')}
                   className={`px-2 py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center space-y-1 transition-all border ${
                     activeRole === 'manager'
                       ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-600/20'
@@ -193,7 +195,7 @@ export const Login: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSelectRole('analyst', 'analyst@revenueagent.ai', 'Analyst123!Pass')}
+                  onClick={() => handleSelectRole('analyst', 'analyst@revenueagent.ai', 'PricingAI#2026!Forecast')}
                   className={`px-2 py-2 rounded-xl text-xs font-semibold flex flex-col items-center justify-center space-y-1 transition-all border ${
                     activeRole === 'analyst'
                       ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300 shadow-md shadow-cyan-600/20'

@@ -37,31 +37,31 @@ def init_db(db: Session) -> None:
     users_to_seed = [
         {
             "email": "superadmin@cuteorange.in",
-            "password": "SuperAdmin123!",
+            "password": "CuteOrange#2026!GlobalAI",
             "full_name": "Super Administrator",
             "role": "Super Admin",
         },
         {
             "email": "admin@revenueagent.ai",
-            "password": "Admin123!Pass",
+            "password": "HotelRev#2026!Enterprise",
             "full_name": "Chief Revenue Administrator",
             "role": "Administrator",
         },
         {
             "email": "manager@revenueagent.ai",
-            "password": "Manager123!Pass",
+            "password": "YieldMgr#2026!DynamicRate",
             "full_name": "Senior Revenue Manager",
             "role": "Revenue Manager",
         },
         {
             "email": "analyst@revenueagent.ai",
-            "password": "Analyst123!Pass",
+            "password": "PricingAI#2026!Forecast",
             "full_name": "Pricing Analyst",
             "role": "Analyst",
         },
         {
             "email": "admin@hotelrevenue.ai",
-            "password": "AdminPass123!",
+            "password": "RevenueCore#2026!Sentinel",
             "full_name": "Revenue Administrator",
             "role": "Administrator",
         },
